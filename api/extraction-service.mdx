@@ -8,7 +8,7 @@ description: "Reference for process_pdf() — the top-level entry point to extra
 
 ---
 
-### `process_pdf(file_bytes, api_key, policy_type=None, force_refresh=False)`
+### `process_pdf(file_bytes, api_key, status_callback=None, force_refresh=False, user_policy_type=None)`
 
 <ParamField path="file_bytes" type="bytes" required>
   Raw PDF file content. Read the file in binary mode and pass the bytes directly — do not encode or convert.
@@ -18,7 +18,15 @@ description: "Reference for process_pdf() — the top-level entry point to extra
   Your Google Gemini API key. See the [Authentication](/api/authentication) page for setup instructions. An empty or invalid key causes the function to return an error immediately.
 </ParamField>
 
-<ParamField path="policy_type" type="str" optional>
+<ParamField path="status_callback" type="callable" optional>
+  An optional callable that receives a single string argument. The pipeline calls it at each processing stage (upload, classification, extraction) to report progress. Pass `None` (the default) to disable progress reporting.
+</ParamField>
+
+<ParamField path="force_refresh" type="bool" default="false">
+  When `True`, bypass the extraction cache and re-extract the document from scratch even if a cached result exists for the same file bytes. Defaults to `False`.
+</ParamField>
+
+<ParamField path="user_policy_type" type="str" optional>
   Override the automatic policy type classification. When provided, the pipeline skips the classifier call and uses this type directly. Must be one of the values from `core.constants.POLICY_TYPES`:
 
   - `"personal_auto"`
@@ -31,10 +39,6 @@ description: "Reference for process_pdf() — the top-level entry point to extra
   - `"unknown"`
 
   Pass `None` (the default) to let the pipeline auto-detect the policy type from the document content.
-</ParamField>
-
-<ParamField path="force_refresh" type="bool" default="false">
-  When `True`, bypass the extraction cache and re-extract the document from scratch even if a cached result exists for the same file bytes. Defaults to `False`.
 </ParamField>
 
 **Returns:** `tuple[dict | None, dict | None, str | None]` — `(extraction_result, metadata, error_message)`
@@ -90,7 +94,7 @@ To extract with a forced policy type (bypasses auto-classification):
 result, metadata, error = process_pdf(
     file_bytes=file_bytes,
     api_key="your-gemini-api-key",
-    policy_type="commercial_auto",
+    user_policy_type="commercial_auto",
 )
 ```
 
@@ -261,7 +265,7 @@ else:
 Common failure conditions:
 
 - **Invalid or missing API key** — returned immediately without calling Gemini.
-- **Invalid `policy_type` value** — caught before the pipeline runs; `error_message` describes the invalid value.
+- **Invalid `user_policy_type` value** — caught before the pipeline runs; `error_message` describes the invalid value.
 - **Non-extractable document type** — some document formats (plain text, image-only scans with no recognisable policy structure) return a descriptive non-extractable message.
 - **Gemini API errors** — network failures, quota exhaustion, or model errors surface as error messages. The pipeline does not retry automatically.
 

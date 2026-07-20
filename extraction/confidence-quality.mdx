@@ -1,5 +1,5 @@
 ---
-title: "Extraction Confidence Scores and Quality Gates"
+title: "Extraction Confidence Scores and Quality Gates Guide"
 sidebarTitle: "Confidence & Quality"
 description: "Understand confidence scores assigned to extracted fields and configure quality gates to control which values need manual review before saving."
 ---
@@ -75,11 +75,13 @@ The new result overwrites the cached version, so subsequent opens of the same fi
 
 ## Carrier Knowledge
 
-The extraction engine accumulates a knowledge profile for each carrier it processes over time. Carriers with a long history of consistent, high-quality extractions — where field values have repeatedly matched what agents confirmed on review — benefit from this accumulated signal during confidence scoring.
+The extraction engine builds a per-carrier knowledge profile as you save policies in your account. Each saved policy contributes to a record of which fields have historically been reliable or unreliable for that carrier, document type, and policy type combination.
 
-This means that for well-known carriers with many processed documents in your account, confidence scores trend higher over time as the engine's carrier-level knowledge base matures. Unusual or first-time carriers will initially produce more medium- and low-confidence fields until sufficient history is built up.
+As your account accumulates history, the engine uses two forms of carrier-level intelligence during extraction: it injects carrier-specific extraction hints into the prompt (for example, where a specific carrier places the policy number or how it formats driver schedules), and it flags fields that have a pattern of low-confidence results so the model pays closer attention to them. Both mechanisms improve extraction accuracy over time — meaning you are likely to see fewer fields requiring manual correction as more policies are processed for a given carrier.
 
-You do not need to configure anything for this feature — it operates automatically as you process more policies.
+Unusual or first-time carriers start without any accumulated history, so initial extractions rely entirely on what the model can infer directly from the document.
+
+You do not need to configure anything for this feature — it operates automatically as you process and save more policies.
 
 <Tip>
   The default quality gate — **Clear low-confidence fields** — is the best balance between speed and accuracy for most workflows. It removes only the values the engine is least sure about while keeping the majority of fields pre-filled, so you spend time only where it matters.

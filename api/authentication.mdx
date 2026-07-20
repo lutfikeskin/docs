@@ -1,7 +1,7 @@
 ---
-title: "Gemini API Key Setup for Extraction Features"
+title: "Gemini API Key Configuration for AI Extraction Features"
 sidebarTitle: "Authentication"
-description: "Configure your Google Gemini API key to enable AI extraction and natural language query features in Insurance Doc Intelligence."
+description: "Configure your Google Gemini API key to enable AI-powered document extraction and natural language query features in Insurance Doc Intelligence."
 ---
 
 AI-powered extraction and natural language query features require a Google Gemini API key. All other features — policy search, CRUD operations, customer management, COI generation, and dashboard metrics — work without one. You only need a key when you call `process_pdf()` or `PolicyService.ask_your_data()`.
@@ -18,9 +18,9 @@ Insurance Doc Intelligence supports three configuration methods. Choose the one 
 
 **Recommended for interactive use.**
 
-Click the **⚙️ Settings** icon in the sidebar, paste your API key into the field, and click **Save**. The key is stored in the browser session and takes effect immediately for the current tab.
+Click the **⚙️ Settings** icon in the sidebar, paste your API key into the field, and click **Save**. The key is stored for the current browser session and takes effect immediately for the active tab.
 
-This approach is convenient for ad-hoc testing and manual document processing. Because the key lives in the browser session, it is lost when you close the tab or refresh the page.
+This approach is convenient for ad-hoc testing and manual document processing. Because the key is tied to the current browser session, it is lost when you close the tab or refresh the page.
 
 ### 2. Environment Variable
 
@@ -51,6 +51,16 @@ GEMINI_API_KEY = "your-gemini-api-key-here"
 ```
 
 Streamlit Secrets integrate cleanly with hosted platforms (Streamlit Community Cloud, Docker, Kubernetes) and keep credentials out of your shell history and process environment.
+
+## Key Resolution Order
+
+When the application starts, it resolves the active Gemini API key using the following priority order:
+
+1. **Settings dialog** — a key saved through the Settings dialog takes highest priority and overrides all other sources for the current session.
+2. **Environment variable** — if no key is present in the session, the application reads `GEMINI_API_KEY` from the process environment.
+3. **Streamlit Secrets** — if neither of the above sources provides a key, the application falls back to `GEMINI_API_KEY` in `.streamlit/secrets.toml`.
+
+If none of these sources provides a key, AI features are disabled until you supply one through the Settings dialog.
 
 ## Key Status
 

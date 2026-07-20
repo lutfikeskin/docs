@@ -1,5 +1,5 @@
 ---
-title: "Insurance Doc Intelligence: Policy Operations Hub"
+title: "Insurance Doc Intelligence: Your Policy Operations Hub"
 sidebarTitle: "Introduction"
 description: "Insurance Doc Intelligence automates policy data extraction, COI generation, and renewal tracking so insurance brokers can focus on clients."
 ---
@@ -36,7 +36,7 @@ The core workflow moves in five stages:
 1. **Upload** — You drop a PDF declarations page onto the Process Policies screen. The app reads the raw text and passes it to the Gemini extraction pipeline.
 2. **Extract** — The pipeline identifies the policy type, selects the matching prompt, and returns a structured JSON payload with a confidence score attached to every field.
 3. **Review** — The extracted values appear on a form. Fields that fall below your configured confidence gate are pre-cleared so you can type them in manually rather than skimming past a wrong value. Nothing blocks you from saving — the gate is a nudge, not a lock.
-4. **Save** — You click Save and the record lands in your local SQLite database, ready to search, export, or compare.
+4. **Save** — You click Save and the record lands in your local database, ready to search, export, or compare.
 5. **COI** — Open Create COI, locate the policy, select a certificate holder from your holders list, and download the completed PDF.
 
 Renewal tracking and policy comparison sit on top of the same database, so every record you save is immediately available across every view.
@@ -46,5 +46,5 @@ Renewal tracking and policy comparison sit on top of the same database, so every
 Before you launch the application, make sure you have:
 
 - **Python 3.9 or later** installed on your machine or server.
-- A **Google Gemini API key** — required for PDF extraction and natural-language database queries. Browse the database and generate COIs from already-saved policies without one.
+- A **Google Gemini API key** — required for PDF extraction and natural-language database queries. You can browse the database and generate COIs from already-saved policies without one.
 - The **application running locally or on a server** — either via `streamlit run app.py` on your machine or deployed as a container.

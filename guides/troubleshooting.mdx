@@ -53,7 +53,7 @@ This guide covers the most common problems you may encounter while using Insuran
     If you have verified that the spend was legitimate and want to continue working today, go to **Settings → Usage Management** and click **Reset Daily Usage Meter**. This resets the meter for the current day without deleting your historical usage logs.
 
     **Permanently increase the budget.**
-    If your daily workflow regularly exceeds $2.50, you can raise the limit by changing the `DEFAULT_DAILY_BUDGET` value in `core/constants.py`. Set it to a value that reflects your expected daily extraction volume. Restart the application after saving the change for it to take effect.
+    If your daily workflow regularly exceeds $2.50, ask your administrator to increase the daily budget limit in the application configuration. Set it to a value that reflects your expected daily extraction volume. A restart is required for the change to take effect.
 
     **Reduce unnecessary extractions.**
     Each re-upload of a cached PDF does not consume API quota (the result is served from cache). Quota is consumed on first extraction and when you use Force Refresh. If your budget is frequently depleted, check how many Force Refresh operations are being run — these bypass the cache and each one counts as a full API call.

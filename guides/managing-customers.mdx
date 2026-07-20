@@ -1,7 +1,7 @@
 ---
-title: "Manage Customers and Policy Assignments"
+title: "Manage Customer Profiles and Policy Assignments in the App"
 sidebarTitle: "Managing Customers"
-description: "Understand how customer profiles are created, linked to policies, and cleaned up in Insurance Doc Intelligence."
+description: "Learn how customer profiles are created automatically, linked to policies, searched, and cleaned up as you work in Insurance Doc Intelligence."
 ---
 
 Customer profiles are created automatically when you save a policy. Each profile links an insured's identity across multiple policies, so a single client — whether an individual, a family, or a business — has one consolidated record regardless of how many policies they carry. You do not need to create customer records manually; the system builds and maintains them as you work through your policy intake process.
@@ -24,9 +24,9 @@ You can filter the customer list using the display mode selector:
 
 | Filter | What it shows |
 |--------|--------------|
-| **Active** | Customers who have at least one policy saved in the database (default view) |
-| **All** | Every customer profile, including those with no policies currently attached |
-| **Orphans** | Customers who have no policies attached |
+| **Active customers** | Customers who have at least one policy saved in the database (default view) |
+| **All customers** | Every customer profile, including those with no policies currently attached |
+| **Orphans only** | Customers who have no policies attached |
 
 Use the search bar to find a specific customer by their personal name, business name, or any known alias. The search matches against all name variants stored on the profile, not just the primary full name.
 
@@ -76,5 +76,5 @@ This means you can safely delete policies for testing or data correction without
 </Info>
 
 <Tip>
-  Add a `primary_email` to every customer profile as soon as you create or onboard a client. The renewal reminder drafting feature pre-fills the **To** field using this address. Without it, the To field will be blank and you will need to enter the address manually each time you draft a renewal email.
+  Add an **email address** to every customer profile as soon as you create or onboard a client. The renewal reminder drafting feature pre-fills the **To** field using this address. Without it, the To field will be blank and you will need to enter the address manually each time you draft a renewal email.
 </Tip>

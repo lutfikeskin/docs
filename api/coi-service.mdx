@@ -1,32 +1,29 @@
 ---
-title: "COIService and COIGenerator API Reference"
+title: "COIService and COIGenerator — ACORD 25 PDF Generation"
 sidebarTitle: "COI Service"
 description: "API reference for COIService and COIGenerator — prepare COI payloads and generate ACORD 25 Certificate of Insurance PDFs programmatically."
 ---
 
-COI generation is split between two components: **COIService** handles payload preparation from an ORM `Policy` object, while **COIGenerator** takes care of filling the ACORD 25 PDF template and returning a ready-to-deliver file. You can use them together through the standard workflow, or call `COIGenerator` directly with your own payload dict when you don't need the ORM helpers.
+COI generation is split between two components: **COIService** handles payload preparation from a `Policy` object, while **COIGenerator** takes care of filling the ACORD 25 PDF template and returning a ready-to-deliver file. You can use them together through the standard workflow, or call `COIGenerator` directly with your own payload dict when you don't need the policy helper.
 
 ---
 
 ## COIService
 
-`COIService` is a static helper that converts a `Policy` ORM object into the `policy_data` dict expected by `COIGenerator`. It automatically resolves NAIC numbers, formats insured address fields, builds vehicle and driver description lines, and annotates compliance data (MCS-90, USDOT, DOC endorsements, BAP symbols) into the operations description.
+`COIService` is a static helper that converts a `Policy` object into the `policy_data` dict expected by `COIGenerator`. It automatically resolves NAIC numbers, formats insured address fields, builds vehicle and driver description lines, and annotates compliance data (MCS-90, USDOT, DOC endorsements, BAP symbols) into the operations description.
+
+`COIService` contains only static methods — no instantiation is required. Import it and call its methods directly:
 
 ```python
-from core.database import get_session, init_db
 from core.services import COIService
-
-engine = init_db()
-session = get_session(engine)
-coi_service = COIService(session)
 ```
 
 ### `COIService.prepare_coi_data(policy)`
 
-Builds the `policy_data` dict and a list of description lines from a `Policy` ORM object. This is a `@staticmethod` — you can call it without an instance.
+Builds the `policy_data` dict and a list of description lines from a `Policy` object. This is a `@staticmethod` — you can call it without an instance.
 
 <ParamField path="policy" type="Policy" required>
-  A `Policy` ORM object retrieved from the database. Must have at least
+  A `Policy` object retrieved from the database. Must have at least
   `carrier_name`, `policy_number`, `effective_date`, `expiration_date`,
   `insured_name`, and `liability_limit` populated for a complete COI.
   Optional but enriching fields include `underwriter_name`, `naic_number`,
@@ -57,15 +54,14 @@ Builds the `policy_data` dict and a list of description lines from a `Policy` OR
 
 ```python title="generate_from_policy.py"
 from core.database import get_session, init_db
-from core.services import COIService
+from core.services import COIService, PolicyService
 from modules.coi.generator import COIGenerator
 
 engine = init_db()
 session = get_session(engine)
 
 # Fetch a policy from the database
-from core.database import Policy
-policy = session.query(Policy).filter_by(policy_number="ABC-123456").first()
+policy = PolicyService(session).get_policy_by_number("ABC-123456")
 
 # Build the payload
 policy_data, desc_lines = COIService.prepare_coi_data(policy)
@@ -125,8 +121,8 @@ Fills the ACORD 25 template with policy and certificate holder data and returns 
 
   | Key | Type | Description |
   |-----|------|-------------|
-  | `carrier_name` | `str` | Brand/trade name of the insurer. Used as the ACORD insurer name when `underwriter_name` is absent. |
-  | `underwriter_name` | `str` | Legal entity name of the insurer. Takes precedence over `carrier_name` on the ACORD form when set. |
+  | `carrier_name` | `str` | Name of the insurer written to the ACORD insurer field. To print the legal entity name on the form, set this key to the full legal name (e.g. `"Progressive Casualty Insurance Company"`). |
+  | `underwriter_name` | `str` | Legal entity name of the insurer. Stored in `policy_data` for reference and display purposes but not directly mapped to a PDF field by the generator. |
   | `naic_number` | `str` | NAIC code printed in the insurer identification block. |
   | `insured_name` | `str` | Full legal name of the named insured. |
   | `insured_address` | `str` | Street address of the named insured. |
@@ -212,12 +208,9 @@ with open("coi_output.pdf", "wb") as f:
 
 ## Insurer Name Resolution
 
-The generator writes two values to the ACORD insurer name field, using the following priority:
+The generator writes `carrier_name` to the ACORD insurer name field. `underwriter_name` is included in the `policy_data` dict (populated by `COIService.prepare_coi_data`) and is available for display or downstream processing, but the PDF field mapping uses `carrier_name` as the value printed on the form.
 
-1. **`underwriter_name`** — the legal entity name of the insurer (e.g. `"Progressive Casualty Insurance Company"`). This is the value printed on the form when set.
-2. **`carrier_name`** — the brand name (e.g. `"Progressive"`). Used as a fallback when `underwriter_name` is `None` or an empty string.
-
-The UI always displays `carrier_name` as the user-facing label, but the ACORD form uses the legal entity name to remain compliant with certificate requirements. `COIService.prepare_coi_data` populates both keys automatically from the ORM policy.
+`COIService.prepare_coi_data` populates both keys automatically from the policy record. If you want the legal entity name (e.g. `"Progressive Casualty Insurance Company"`) to appear on the ACORD form instead of the brand name (e.g. `"Progressive"`), set `carrier_name` to the legal entity name in your `policy_data` before calling `generate_coi`.
 
 ---
 

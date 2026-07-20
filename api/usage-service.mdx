@@ -1,7 +1,7 @@
 ---
 title: "UsageService API Reference for Tracking Gemini Costs"
 sidebarTitle: "Usage Service"
-description: "Monitor and manage your daily Gemini API spend, call counts, and token usage with UsageService."
+description: "Track Gemini API token usage and estimated cost per day. Monitor call counts, enforce budget limits, and retrieve usage history with UsageService."
 ---
 
 `UsageService` tracks every extraction and query call's token usage and estimated cost against a configurable daily budget. Use it to monitor spend in real time, surface usage data in your own tooling, and prevent budget overruns before triggering batch extractions.
@@ -21,8 +21,8 @@ usage_service = UsageService(session)
 
 <ParamField path="session" type="Session" required>
   A SQLAlchemy `Session` bound to the application database. Obtain one via
-  `get_session(init_db())`. All `UsageService` methods read from and write to
-  the `api_usage` table through this session.
+  `get_session(init_db())`. All `UsageService` methods read and write usage
+  records through this session.
 </ParamField>
 
 ---
@@ -41,7 +41,7 @@ print(f"Today's spend: ${daily_spend:.4f}")
 ```
 
 <Info>
-  All `ApiUsage` timestamps are stored as UTC-naive datetimes. `get_daily_usage`
+  Usage timestamps are stored as UTC-naive datetimes. `get_daily_usage`
   converts Eastern midnight to its UTC equivalent before querying, so the
   daily window resets at midnight Eastern regardless of your server's local timezone.
 </Info>
@@ -79,18 +79,17 @@ print(f"Tokens in: {input_tokens:,}  |  Tokens out: {output_tokens:,}")
 
 ---
 
-### `is_over_budget(budget=None)`
+### `is_over_budget(daily_limit=1.0)`
 
 Checks whether today's spend has reached or exceeded a daily budget limit.
 
-<ParamField path="budget" type="float" default="DEFAULT_DAILY_BUDGET ($2.50)">
-  The daily spend ceiling in US dollars. When omitted, the caller is expected
-  to pass `DEFAULT_DAILY_BUDGET` from `core/constants.py` (currently `2.50`).
-  The extraction pipeline passes this constant automatically — see the
-  [Default Budget](#default-budget) section below.
+<ParamField path="daily_limit" type="float" default="1.0">
+  The daily spend ceiling in US dollars. Pass `DEFAULT_DAILY_BUDGET` (currently
+  `2.50`) to use the application-wide default, or any custom float for
+  one-off overrides. See the [Default Budget](#default-budget) section below.
 </ParamField>
 
-**Returns:** `bool` — `True` if `get_daily_usage() >= budget`, `False` otherwise.
+**Returns:** `bool` — `True` if `get_daily_usage() >= daily_limit`, `False` otherwise.
 
 ```python
 from core.constants import DEFAULT_DAILY_BUDGET
@@ -111,20 +110,14 @@ else:
 
 ---
 
-### `log_usage(model_name, request_type, input_tokens, output_tokens, cost)`
+### `log_usage(model_name, input_tokens, output_tokens, request_type="extraction", cached_input_tokens=0)`
 
-Records a single API call to the `api_usage` table.
+Records a single API call to the usage log table. Cost is computed internally from the model's pricing table — you do not supply it.
 
 <ParamField path="model_name" type="str" required>
   The Gemini model identifier (e.g. `"gemini-2.5-flash"`,
   `"gemini-3.1-flash-lite"`). Used to look up the per-token pricing rate from
   `UsageService.PRICING`.
-</ParamField>
-
-<ParamField path="request_type" type="str" required>
-  A short tag describing the call's purpose. Common values used internally are
-  `"extraction"`, `"classification"`, and `"query_sql"`. You can supply any
-  string — it is stored as-is and appears in the recent-usage table in Settings.
 </ParamField>
 
 <ParamField path="input_tokens" type="int" required>
@@ -134,6 +127,12 @@ Records a single API call to the `api_usage` table.
 
 <ParamField path="output_tokens" type="int" required>
   Generated (completion) tokens returned by the model.
+</ParamField>
+
+<ParamField path="request_type" type="str" default='"extraction"'>
+  A short tag describing the call's purpose. Common values used internally are
+  `"extraction"`, `"classification"`, and `"query_sql"`. You can supply any
+  string — it is stored as-is and appears in the recent-usage table in Settings.
 </ParamField>
 
 <ParamField path="cached_input_tokens" type="int" default="0">
@@ -150,7 +149,7 @@ Records a single API call to the `api_usage` table.
   matching Google's Agent Platform pricing tiers.
 </ParamField>
 
-**Returns:** The newly created `ApiUsage` ORM object (already committed to the database).
+**Returns:** The newly created usage log record (already committed to the database).
 
 <Warning>
   `log_usage` is called automatically by the extraction pipeline and the
@@ -169,7 +168,7 @@ Returns the most recently logged API calls, newest first.
   Maximum number of records to return.
 </ParamField>
 
-**Returns:** `list[ApiUsage]` — ORM objects ordered by `timestamp DESC`. Each record exposes:
+**Returns:** `list` — Usage records ordered by `timestamp DESC` (newest first). Each record exposes:
 
 <ResponseField name="timestamp" type="datetime">
   UTC-naive datetime when the call was logged.
@@ -205,7 +204,7 @@ for record in recent:
 
 ### `clear_usage()`
 
-Deletes **all** records from the `api_usage` table, resetting every counter and cost total to zero.
+Deletes **all** usage records, resetting every counter and cost total to zero.
 
 **Returns:** `tuple[bool, str]` — `(success, message)`.
 
@@ -225,25 +224,24 @@ print(msg)  # "Usage logs cleared."
 
 <Warning>
   `clear_usage` is a destructive, unrecoverable operation — it permanently
-  deletes the entire usage history, not just today's records. In the UI this
-  corresponds to the **Reset Daily Usage Meter** button in Settings.
+  deletes the entire usage history, not just today's records.
 </Warning>
 
 ---
 
 ## Default Budget
 
-The default daily budget is **$2.50**, set as `DEFAULT_DAILY_BUDGET` in `core/constants.py`:
+The default daily budget is **$2.50**, defined as the `DEFAULT_DAILY_BUDGET` constant:
 
-```python title="core/constants.py"
-DEFAULT_DAILY_BUDGET = 2.50
+```python
+from core.constants import DEFAULT_DAILY_BUDGET  # 2.50
 ```
 
 This is a **soft limit**. When the daily spend reaches or exceeds this value:
 
 - A warning banner is shown in the sidebar.
-- The extraction pipeline (`gemini_transport.py`) raises a budget-exceeded error and stops processing new documents.
-- No extraction is permanently blocked at the database level — you can raise the limit at any time by editing `DEFAULT_DAILY_BUDGET` and restarting the application.
+- The extraction pipeline raises a budget-exceeded error and stops processing new documents.
+- No extraction is permanently blocked — you can raise the limit at any time by changing `DEFAULT_DAILY_BUDGET` and restarting the application.
 
 To temporarily raise the ceiling for a batch job without editing the constant, pass a higher value directly to `is_over_budget`:
 
@@ -280,6 +278,6 @@ All figures reflect Eastern Time midnight as the day boundary, so the meter rese
 | `gemini-2.5-flash` | $0.30 | $2.50 | $0.03 |
 | `gemini-2.5-flash-lite` | $0.10 | $0.40 | $0.01 |
 | `gemini-2.0-flash` | $0.10 | $0.40 | $0.01 |
-| `gemini-1.5-flash` | $0.075 | $0.30 | $0.009 |
+| `gemini-1.5-flash` | $0.075 | $0.30 | $0.009375 |
 
-Pricing is defined in `UsageService.PRICING` inside `core/services.py`. Update that dict if Google adjusts rates or you add a new model to your extraction pipeline.
+Pricing is defined in `UsageService.PRICING`. Update that dict if Google adjusts rates or you add a new model to your extraction pipeline.

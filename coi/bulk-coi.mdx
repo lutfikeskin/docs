@@ -1,7 +1,7 @@
 ---
-title: "Bulk Certificate of Insurance Generation"
+title: "Bulk ACORD 25 Certificate of Insurance (COI) Generation"
 sidebarTitle: "Bulk COI"
-description: "Generate COIs for multiple certificate holders at once and download them as a single ZIP archive in Insurance Doc Intelligence."
+description: "Generate ACORD 25 COIs for multiple certificate holders at once and download them as a single ZIP archive in Insurance Doc Intelligence."
 ---
 
 Bulk mode lets you generate Certificates of Insurance for multiple certificate holders from the same policy in a single operation. Instead of going through the single-COI flow once per holder, you select all the holders you need, configure coverage settings once, and download a ZIP archive containing one ready-to-send PDF for each holder. This is especially common for trucking and logistics companies that carry a large client list requiring current COIs — shippers, freight brokers, and terminal operators often all need certificates from the same underlying policy.
@@ -17,7 +17,7 @@ Bulk mode lets you generate Certificates of Insurance for multiple certificate h
   </Step>
 
   <Step title="Select multiple certificate holders">
-    Use the **Select Companies** multiselect to pick every holder you need. The list is loaded from your saved company data (`data/Additionalinsuredcomps.xlsx` and `data/coi_holders.json`). You can type in the multiselect box to filter by name. Select as many companies as needed — the count of selected companies is shown in an info message below the multiselect.
+    Use the **Select Companies** multiselect to pick every holder you need. The list is loaded from your saved company data. You can type in the multiselect box to filter by name. Select as many companies as needed — the count of selected companies is shown in an info message below the multiselect.
 
     Once you have your selection, the system will generate one PDF per company using the name and address stored for each entry.
   </Step>
@@ -41,6 +41,10 @@ Bulk mode lets you generate Certificates of Insurance for multiple certificate h
     The **Operations Description** text area is pre-populated with a description built from the policy. In bulk mode, this same description is applied to all COIs. You can edit it freely — the text applies to every holder in the batch.
 
     Use the **Description Font Size** slider to adjust the font size (range: 4–12 pt, default: 8 pt) if the description is long. The same font size is used for every PDF in the batch.
+  </Step>
+
+  <Step title="Review insured details">
+    Scroll to the **Insured Details** section. The insured name, address, city, state, ZIP, and NAIC number are pre-filled from the policy record. Edit any field here if a minor correction is needed — these changes apply to all COIs in the batch and do not modify the stored policy.
   </Step>
 
   <Step title="Click 'Generate Bulk COIs'">
@@ -90,9 +94,9 @@ There is no hard upper limit on the number of certificate holders you can select
 For smaller batches of a handful of holders, generation is near-instant.
 
 <Note>
-  Bulk mode only works with companies that are already in your saved certificate holder list. If a holder you need is not in `data/coi_holders.json` or `data/Additionalinsuredcomps.xlsx`, they will not appear in the multiselect. Add them to the saved list first, or generate their COI separately using [Single COI](/coi/single-coi) mode where you can enter holder details manually.
+  Bulk mode only works with companies that are already in your saved certificate holder list. If a holder you need is not in the saved list, they will not appear in the multiselect. Add them to the saved list first, or generate their COI separately using [Single COI](/coi/single-coi) mode where you can enter holder details manually.
 </Note>
 
 <Tip>
-  Keep `data/coi_holders.json` up to date as your client list changes. Holders with stale addresses will produce COIs with incorrect information that you then have to regenerate. A brief quarterly review of the file — checking for address changes, new clients, and removed relationships — saves time during high-volume renewal seasons when bulk generation speed matters most.
+  Keep your saved certificate holder list up to date as your client list changes. Holders with stale addresses will produce COIs with incorrect information that you then have to regenerate. A brief quarterly review — checking for address changes, new clients, and removed relationships — saves time during high-volume renewal seasons when bulk generation speed matters most.
 </Tip>

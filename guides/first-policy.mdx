@@ -1,7 +1,7 @@
 ---
-title: "Upload and Save Your First Insurance Policy"
+title: "Upload and Save Your First Policy in Doc Intelligence"
 sidebarTitle: "First Policy"
-description: "A complete walkthrough of uploading a policy PDF, reviewing extracted data, handling duplicates, and saving your first policy record."
+description: "A complete walkthrough of uploading a policy PDF, reviewing extracted data, handling duplicates, and saving your first policy record to the database."
 ---
 
 This guide walks you through the complete process of uploading an insurance policy PDF, reviewing what the AI extracted, resolving any duplicates, and saving your first policy record to the database. If you're new to Insurance Doc Intelligence, start here — it covers everything from the initial file upload to confirming a saved record.
@@ -60,14 +60,13 @@ This guide walks you through the complete process of uploading an insurance poli
   - **Possible update** — a related policy exists (same insured, nearby dates) but the policy number differs; you may be saving a renewal or a mid-term change
   - **Exact match / conflict** — a policy with this exact policy number already exists in your database
 
-  For exact matches, a **diff preview** opens automatically. It shows a side-by-side comparison of every field that will change if you choose to update the existing record, so you can confirm the changes before committing.
+  For exact matches, a **diff preview** is available as a collapsible panel. Expand it to see a side-by-side comparison of every field that will change if you choose to update the existing record, so you can confirm the changes before committing.
 
   ### Choose update or new record
 
-  When the system detects an exact policy number match, you have two options:
+  When the system detects an exact policy number match, the primary action becomes **Update Current Policy**, which overwrites the existing record with the new extraction data. All field changes are logged automatically in the policy history.
 
-  - **Update existing record** — overwrites the existing policy with the new extraction data; all changes are logged in the history for that policy
-  - **Create new entry** — saves the incoming data as a separate record with the same policy number; use this only if the two records are genuinely distinct (for example, a rewrite with a reused number)
+  If the incoming document is genuinely a separate policy that shares the same number — for example, a rewrite with a reused number — edit the policy number field on the review form to make it unique before saving. The system does not allow two records with identical policy numbers.
 
   If there is no match, this step is skipped and the system proceeds directly to save.
 

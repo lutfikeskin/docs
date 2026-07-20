@@ -1,5 +1,5 @@
 ---
-title: "Configure Insurance Doc Intelligence Settings"
+title: "Configuration: Customize Insurance Doc Intelligence"
 sidebarTitle: "Configuration"
 description: "Set your Gemini API key, extraction quality gate, and daily usage budget to customize how Insurance Doc Intelligence behaves for your team."
 ---
@@ -16,9 +16,9 @@ The Gemini API key authenticates calls to Google's generative AI service, which 
 - **Environment variable** — Set `GEMINI_API_KEY` in your shell or container environment before starting the app. The app reads it automatically at launch.
 - **Streamlit secrets** — Add `GEMINI_API_KEY = "your_key"` to `.streamlit/secrets.toml`. This is the recommended approach for shared or server deployments where you do not control the shell environment.
 
-The app checks these sources in order: session state (dialog) → process environment → `st.secrets`. The first non-empty value wins.
+The app checks these sources in order: Settings dialog → environment variable → `.streamlit/secrets.toml`. The first non-empty value wins.
 
-The API key is stored in your **browser session only** — it is never written to disk, the database, or any log file. Closing the tab or refreshing the browser clears it unless you have also set the environment variable or `st.secrets`.
+The API key is stored in your **browser session only** — it is never written to disk, the database, or any log file. Closing the tab or refreshing the browser clears it unless you have also set the environment variable or Streamlit secrets.
 
 <Warning>
   Never commit your Gemini API key to source control. If your key appears in a file tracked by Git, rotate it immediately in Google AI Studio and remove the file from your repository history.
@@ -46,7 +46,7 @@ To change the gate, open **⚙️ Settings**, scroll to **Extraction Quality Gat
 
 The daily budget tracks how much you spend on Gemini API calls within a single calendar day (Eastern Time) and warns you when you approach or reach the limit.
 
-- **Default limit:** `$2.50` per day, set by `DEFAULT_DAILY_BUDGET` in `core/constants.py`.
+- **Default limit:** `$2.50` per day.
 - **Budget meter:** When an API key is active, the sidebar shows a live spend meter — current spend vs. the daily limit — along with call count and token statistics.
 - **Reset:** Open **⚙️ Settings**, scroll to **Usage Management**, and click **Reset Daily Usage Meter** to zero the counter immediately.
 

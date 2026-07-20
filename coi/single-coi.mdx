@@ -1,7 +1,7 @@
 ---
-title: "Generate a Single Certificate of Insurance"
+title: "Generate a Single ACORD 25 Certificate of Insurance"
 sidebarTitle: "Single COI"
-description: "Step-by-step guide to generating one ACORD 25 Certificate of Insurance from a saved policy in Insurance Doc Intelligence."
+description: "Step-by-step guide to generating one ACORD 25 Certificate of Insurance from a saved policy record in Insurance Doc Intelligence system."
 ---
 
 The **Create COI** page lets you generate a single ACORD 25 Certificate of Insurance for one certificate holder using data already saved in your policy records. You choose the policy, fill in or quick-fill the holder's details, confirm which coverage sections apply, and download the PDF — all without re-keying policy information by hand.
@@ -27,7 +27,7 @@ The **Create COI** page lets you generate a single ACORD 25 Certificate of Insur
 
     - **Additional Insured** — standard COI; the ADDL INSD column is marked "Y" and the description includes a clause noting the holder is also listed as an additional insured.
     - **Certificate Holder** — drops the additional insured clause and clears the ADDL INSD column.
-    - **Lienholder** — designed for loss payee situations; the Motor Truck Cargo section is replaced with Comp/Coll deductible information, and you must select the specific vehicles covered by the Loss Payee clause from a multiselect list.
+    - **Lienholder** — designed for loss payee situations; the Motor Truck Cargo section is replaced with Comp/Coll deductible information, the ADDL INSD column is marked "Y", and you must select the specific vehicles covered by the Loss Payee clause from a multiselect list.
   </Step>
 
   <Step title="Toggle coverage sections">
@@ -44,6 +44,10 @@ The **Create COI** page lets you generate a single ACORD 25 Certificate of Insur
     The **Operations Description** text area is pre-populated with a description built from the policy — including vehicle list, driver list, radius of operation, and a type-specific clause (e.g., "Certificate Holder is also listed as an additional insured"). You can edit this text freely before generating.
 
     If the description is long, use the **Description Font Size** slider to reduce the font size (range: 4–12 pt, default: 8 pt) so the text fits within the COI field without being cut off.
+  </Step>
+
+  <Step title="Review insured details">
+    Scroll to the **Insured Details** section. The insured name, address, city, state, ZIP, and NAIC number are pre-filled from the policy record. Edit any field here if a minor correction is needed — these changes apply only to this COI and do not modify the stored policy.
   </Step>
 
   <Step title="Click 'Generate & Download PDF'">
@@ -66,21 +70,16 @@ The **Create COI** page lets you generate a single ACORD 25 Certificate of Insur
 
 ## Quick-Fill Certificate Holders
 
-The **Quick Fill from Company List** dropdown is populated from two sources that are loaded at startup:
+The **Quick Fill from Company List** dropdown is populated from your saved company list, which is loaded at startup from the company data file your administrator maintains. When you select a company from the dropdown, the **Holder Name**, **Address**, **City**, **State**, and **ZIP** fields are all pre-filled instantly. The holder form fields remain editable after quick-fill, so you can make one-off corrections without modifying the saved list.
 
-- `data/Additionalinsuredcomps.xlsx` — your primary company list
-- `data/coi_holders.json` — a supplementary JSON list of saved holders
-
-When you select a company from the dropdown, the **Holder Name**, **Address**, **City**, **State**, and **ZIP** fields are all pre-filled instantly. The holder form fields remain editable after quick-fill, so you can make one-off corrections without modifying the saved list.
-
-If a company you need is not in the list, fill in the holder fields manually. To make a company available for future quick-fill and bulk generation, add it to `data/coi_holders.json` or the Excel file.
+If a company you need is not in the list, fill in the holder fields manually. To make a company available for future quick-fill and bulk generation, ask your administrator to add it to the saved company list.
 
 ## Insurer Name on the COI
 
 The insurer name that appears on the printed COI is resolved in a specific order:
 
-1. **Legal entity name** (`underwriter_name`) — used when present; this is the name of the underwriting carrier as it appears on the policy declarations.
-2. **Carrier brand name** (`carrier_name`) — used as a fallback when no underwriter name is recorded.
+1. **Legal entity name** — used when present; this is the name of the underwriting carrier as it appears on the policy declarations.
+2. **Carrier brand name** — used as a fallback when no underwriter name is recorded.
 
 This ensures the COI reflects the legally accurate insuring entity rather than a marketing brand name, which is important for compliance and claims purposes.
 

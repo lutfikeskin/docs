@@ -1,5 +1,5 @@
 ---
-title: "Certificate of Insurance Generation Guide"
+title: "ACORD 25 Certificate of Insurance (COI) Generation Guide"
 sidebarTitle: "Overview"
 description: "Generate ACORD 25 Certificates of Insurance from your saved policy records — single download or bulk ZIP for multiple certificate holders."
 ---
@@ -21,7 +21,7 @@ The ACORD 25 template is pre-loaded in the system; you never need to upload or c
 
 Every COI is populated directly from the policy record. The following fields are pulled automatically:
 
-- **Insurer name** — uses the legal entity name (`underwriter_name`) when it is available; falls back to the carrier brand name (`carrier_name`) when it is not
+- **Insurer name** — uses the underwriting carrier's legal entity name when it is available; falls back to the carrier's brand name when it is not
 - **Insured name and address** — including city, state, and ZIP
 - **Policy number**
 - **Effective date and expiration date** — formatted as MM/DD/YYYY
@@ -41,7 +41,7 @@ The COI form includes three coverage sections that you can toggle independently:
 | **Automobile Liability** | Covers commercial auto. Uses the same policy number and dates as the GL section. |
 | **Motor Truck Cargo** | Covers cargo in transit. Populated from the cargo limit and deductible on the policy. |
 
-Coverage sections are **not assumed to be enabled**. Each toggle is pre-set based on whether the system found evidence of that coverage when the policy was extracted — `has_general_liability`, `has_auto_liability`, and a non-empty cargo limit. Always verify the pre-set values match the actual policy before generating.
+Coverage sections are **not assumed to be enabled**. Each toggle is pre-set based on whether the system found evidence of that coverage when the policy was extracted — General Liability, Automobile Liability, and Cargo are each evaluated independently. Always verify the pre-set values match the actual policy before generating.
 
 ## File Naming
 
@@ -73,5 +73,5 @@ Characters that are invalid in Windows filenames (`\ / : * ? " < > |`) are autom
 </CardGroup>
 
 <Note>
-  If **PyMuPDF** (`fitz`) is installed in your environment, the generated PDF will have its form fields flattened — the output is a non-editable, print-ready document. If PyMuPDF is not installed, the PDF is returned with fillable form fields intact. Either way you receive a valid, complete COI; the only difference is whether the fields remain interactive.
+  Generated COIs are delivered as print-ready, non-editable PDFs when the full rendering library is available in your environment. If it is not installed, the PDF is returned with fillable form fields intact. Either way you receive a valid, complete COI; the only difference is whether the fields remain interactive.
 </Note>

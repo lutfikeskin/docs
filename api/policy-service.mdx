@@ -147,7 +147,7 @@ On save, this method:
   - `_review_commercial_owner_name` (`str`): supply a human owner name for commercial policies where the insured name is a business entity.
 </ParamField>
 
-**Returns:** `tuple[bool, str]` — `(success, message)`. On conflict with `_duplicate_action="create_new"`, returns `(False, "Cannot create a new policy...")`.
+**Returns:** `tuple[bool, str]` — `(success, message)`. On conflict with `_duplicate_action="create_new"`, returns `(False, "Cannot create a new policy with the same policy number. Edit the policy number or update the existing policy.")`.
 
 ```python
 result, metadata, error = process_pdf(file_bytes=pdf_bytes, api_key=api_key)
@@ -174,27 +174,50 @@ Analyses an extraction result dict and returns a structured duplicate detection 
   The extraction result dict returned by `process_pdf()`.
 </ParamField>
 
-**Returns:** `dict` with a `status` key and supporting fields. Possible status values:
+**Returns:** `dict` with the following keys:
 
 <ResponseField name="status" type="str">
   One of the following values:
 
-  - `new_policy` — no existing policy with a matching number was found; safe to save.
-  - `exact_match` — an exact policy number match exists; the incoming data matches the stored record closely.
-  - `same_number_conflict` — the policy number matches an existing record but carrier or other key fields differ significantly.
-  - `possible_related` — no number match but a related policy (same insured, nearby dates) was found.
+  - `no_match` — no existing policy with a matching number was found; safe to save as a new record.
+  - `exact_policy_match` — the policy number matches an existing record and carrier/insured name are consistent; the recommended action is to update the existing policy.
+  - `exact_number_carrier_conflict` — the policy number matches an existing record but the carrier name or insured name differs; requires manual review before saving.
+  - `possible_related_policy` — no matching policy number was found, but another policy with the same insured name and carrier may be related.
+  - `missing_policy_number` — the incoming extraction result has no usable policy number; review is required.
+</ResponseField>
+
+<ResponseField name="confidence" type="str">
+  Confidence level of the detection result: `"high"`, `"medium"`, or `"low"`.
+</ResponseField>
+
+<ResponseField name="recommended_action" type="str">
+  Suggested next step: `"create_new"`, `"update_existing"`, or `"review"`.
+</ResponseField>
+
+<ResponseField name="reason" type="str">
+  Human-readable explanation of why this status was assigned.
+</ResponseField>
+
+<ResponseField name="existing_policy_id" type="int | None">
+  The database ID of the matched existing policy, or `None` if no match was found.
+</ResponseField>
+
+<ResponseField name="existing_policy" type="dict | None">
+  A summary dict of the matched existing policy containing `id`, `policy_number`, `insured_name`, `carrier_name`, `policy_type`, `effective_date`, `expiration_date`, and `status`. `None` if no match was found.
 </ResponseField>
 
 ```python
 dup = service.detect_duplicate_for_extraction(result)
 
-if dup["status"] == "new_policy":
+if dup["status"] == "no_match":
     service.save_policy_from_extraction(result)
-elif dup["status"] == "exact_match":
+elif dup["status"] == "exact_policy_match":
     print("Updating existing policy record.")
     service.save_policy_from_extraction(result)
-elif dup["status"] == "same_number_conflict":
+elif dup["status"] == "exact_number_carrier_conflict":
     print("Policy number conflict — manual review required.")
+elif dup["status"] == "possible_related_policy":
+    print(f"Possible related policy: {dup['existing_policy']['policy_number']}")
 ```
 
 ---
@@ -317,9 +340,13 @@ for policy in expiring_soon:
 
 ---
 
-### `get_renewal_buckets()`
+### `get_renewal_buckets(overdue_lookback_days=30)`
 
 Groups upcoming and recently expired policies into four urgency buckets for renewal tracking.
+
+<ParamField path="overdue_lookback_days" type="int" default="30">
+  How many days into the past to include in the `overdue` bucket. Policies that expired more than this many days ago are excluded from all buckets. Defaults to `30`.
+</ParamField>
 
 **Returns:** `dict[str, list[Policy]]` with the following keys, each containing a list of `Policy` objects sorted by `expiration_date` ascending:
 
@@ -349,6 +376,9 @@ print(f"Watch:    {len(buckets['watch'])}")
 
 for policy in buckets["urgent"]:
     print(f"  {policy.policy_number} — {policy.insured_name} — expires {policy.expiration_date}")
+
+# Extend the overdue lookback window to 60 days
+buckets = service.get_renewal_buckets(overdue_lookback_days=60)
 ```
 
 ---
