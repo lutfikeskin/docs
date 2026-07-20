@@ -1,20 +1,67 @@
 ---
-title: "Introduction"
-description: "Welcome to your project"
+title: "Insurance Doc Intelligence"
+description: "AI-powered insurance operations workspace for extracting policy data, managing records, generating COIs, and tracking renewals."
 ---
 
-Write a short description of your product here. What it does, who it's for, and what they can accomplish with it.
+Insurance Doc Intelligence is your all-in-one workspace for modern insurance operations. Upload policy PDFs and let the AI extraction engine pull out structured data — insured names, carriers, coverage limits, vehicles, drivers, and more — so your team spends less time rekeying and more time serving clients.
 
-<Tip>
-  Ready to make this your own? Start by editing this page. Update your `docs.json` file to customize your site. Then fill out the [Quickstart](/quickstart) page.
-</Tip>
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get up and running in minutes — from install to your first extracted policy.
+  </Card>
+  <Card title="Process Policies" icon="cloud-arrow-up" href="/features/process-policies">
+    Upload PDFs and extract structured insurance data automatically.
+  </Card>
+  <Card title="COI Generation" icon="file-pdf" href="/coi/overview">
+    Generate ACORD 25 Certificates of Insurance individually or in bulk.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore the full service API for policies, customers, COIs, and usage.
+  </Card>
+</CardGroup>
 
-<Card title="Quickstart" icon="rocket" href="/quickstart">
-  This card links to the quickstart page in your project.
-</Card>
-<Card title="Components" icon="puzzle-piece" href="https://mintlify.com/docs/components">
-  Add cards, callouts, steps, tabs, and more to design and structure your pages.
-</Card>
-<Card title="Settings" icon="gear" href="https://mintlify.com/docs/organize/settings">
-  Set your site name, branding, and navigation in the `docs.json` file.
-</Card>
+## What You Can Do
+
+Insurance Doc Intelligence covers the full policy lifecycle — from intake to certificate delivery.
+
+<CardGroup cols={3}>
+  <Card title="Extract Policies" icon="wand-magic-sparkles" href="/extraction/overview">
+    AI reads declarations pages, renewal docs, and COIs and returns structured data.
+  </Card>
+  <Card title="Manage Database" icon="database" href="/features/database">
+    Search, edit, and export your full portfolio of policies and customers.
+  </Card>
+  <Card title="Track Renewals" icon="bell" href="/features/renewals">
+    See expiring policies in urgency buckets and draft renewal reminder emails.
+  </Card>
+  <Card title="Compare Policies" icon="arrows-left-right" href="/features/compare-policies">
+    Side-by-side diff of any two policies — spot coverage changes at a glance.
+  </Card>
+  <Card title="Single COI" icon="file-circle-check" href="/coi/single-coi">
+    Generate a single Certificate of Insurance with one click.
+  </Card>
+  <Card title="Bulk COI" icon="files" href="/coi/bulk-coi">
+    Generate COIs for multiple certificate holders and download as a ZIP.
+  </Card>
+</CardGroup>
+
+## Get Started in 4 Steps
+
+<Steps>
+  <Step title="Install and run the app">
+    Install dependencies and start the Streamlit application on your machine or server. See the [Quickstart](/quickstart) for the full setup flow.
+  </Step>
+  <Step title="Add your Gemini API key">
+    Open **Settings** from the sidebar and paste your Google Gemini API key. This powers the extraction and natural-language query features.
+  </Step>
+  <Step title="Upload your first policy PDF">
+    Go to **Process Policies**, drag and drop a declarations page PDF, review the extracted data, and save it to your database.
+  </Step>
+  <Step title="Generate a Certificate of Insurance">
+    Head to **Create COI**, search for the saved policy, select a certificate holder, and download your ACORD 25 PDF.
+  </Step>
+</Steps>
+
+<Note>
+  You need a Google Gemini API key to use extraction and natural-language query features. All other features — search, database management, COI generation, and renewals — work without it.
+</Note>

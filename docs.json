@@ -1,72 +1,97 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "Insurance Doc Intelligence",
+  "theme": "luma",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#005AA9",
+    "light": "#E6F4FF",
+    "dark": "#003366"
   },
   "favicon": "/favicon.svg",
   "navigation": {
-    "pages": [
+    "tabs": [
       {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "configuration"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/dashboard",
+              "features/process-policies",
+              "features/database",
+              "features/renewals",
+              "features/compare-policies"
+            ]
+          },
+          {
+            "group": "COI Generation",
+            "pages": [
+              "coi/overview",
+              "coi/single-coi",
+              "coi/bulk-coi"
+            ]
+          },
+          {
+            "group": "Extraction Engine",
+            "pages": [
+              "extraction/overview",
+              "extraction/document-types",
+              "extraction/coverage-types",
+              "extraction/confidence-quality"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/first-policy",
+              "guides/managing-customers",
+              "guides/renewal-workflow",
+              "guides/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Policy Service",
+            "pages": [
+              "api/policy-service",
+              "api/customer-service",
+              "api/extraction-service"
+            ]
+          },
+          {
+            "group": "COI & Utilities",
+            "pages": [
+              "api/coi-service",
+              "api/usage-service"
+            ]
+          }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
     ]
   },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/lutfikeskin/InsuranceProject"
     }
   }
 }

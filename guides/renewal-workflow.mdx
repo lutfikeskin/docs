@@ -1,0 +1,82 @@
+---
+title: "End-to-End Policy Renewal Workflow"
+sidebarTitle: "Renewal Workflow"
+description: "Step-by-step guide to managing expiring policies, contacting clients, uploading renewal documents, and comparing old vs. new coverage."
+---
+
+This guide walks you through the full renewal lifecycle inside Insurance Doc Intelligence — from identifying which policies are expiring soon, to contacting clients, to uploading and saving renewal documents, to comparing old and new coverage side by side. Following this workflow consistently means no renewal slips through the cracks and every coverage change is documented.
+
+<Steps>
+
+  ### Open Renewals
+
+  Click **Renewals** in the left sidebar to open the renewal management page. At the top of the page, the **KPI bar** shows policy counts grouped by urgency:
+
+  | Bucket | Meaning |
+  |--------|---------|
+  | **Overdue** | Policies that expired in the last 30 days — recent enough that a backdated renewal may still be possible |
+  | **Urgent 🔴** | Expiring within the next 14 days |
+  | **Warning 🟡** | Expiring in 15–30 days |
+  | **Watch 🔵** | Expiring in 31–60 days |
+
+  Focus your attention on **Overdue** and **Urgent** first. Any policy in those buckets needs immediate action.
+
+  ### Sort by premium
+
+  Click the **Premium** column header in the renewal table to sort policies by premium value from highest to lowest. This surfaces your highest-value accounts at the top so you can prioritize them for outreach. Click the header a second time to reverse the sort.
+
+  ### Select an expiring policy
+
+  Click any row in the renewal table to expand the **action panel** directly below it. The action panel shows the policy's key details — insured name, carrier, effective and expiration dates, and premium — along with the available actions for that policy.
+
+  ### Preview the renewal reminder email
+
+  In the action panel, click **Preview Reminder Email**. A draft email opens with the **To**, **Subject**, and **Body** fields pre-filled based on the policy details and the customer's contact information. Review the draft and edit any field as needed before sending.
+
+  From the email preview, you can:
+
+  - **Download as .txt** — save the draft to send from your own email client
+  - **Log as contact** — record that an email reminder was sent, which increments the "Contacted this week" KPI on the dashboard
+
+  ### Log contact
+
+  If you reached the client by phone, met with them in person, or handled the renewal through a channel outside the system, use **Log contact (skip email)** in the action panel. Select the contact method (phone, in-person, external email, other) and add any notes about the conversation. Logging contact increments the **Contacted this week** KPI and timestamps the outreach so you have a record of when you last touched the account.
+
+  ### Upload the renewal document
+
+  When the client sends the renewed policy declarations page, go to **Process Policies** in the sidebar and upload the file the same way you would for any new policy. The extraction pipeline reads the new document and produces a reviewed extraction result.
+
+  ### Review and save the renewal
+
+  After extraction, review the fields in the Process Policies page. If the policy number on the renewal document **matches the existing record** in your database, the duplicate detection system will identify it as an exact match and display a **diff preview** — a side-by-side comparison of every field that has changed between the current record and the incoming renewal.
+
+  Common changes to look for in the diff:
+
+  - Updated effective and expiration dates
+  - Premium changes (increases or decreases)
+  - Coverage limit changes
+  - Vehicles added or removed
+
+  Once you have reviewed the diff and confirmed the changes are correct, click **Save** and choose **Update existing record**. The policy record is updated in place and the full change history is logged automatically.
+
+  ### Compare old vs. new coverage
+
+  After saving the renewal, open the **Compare Policies** page from the sidebar. Select the **renewed policy** as Policy A and the **prior year's policy** as Policy B. The page generates a detailed diff table showing every field and coverage line that changed between the two policy periods.
+
+  Use the comparison to:
+
+  - Confirm that all requested coverage changes were applied
+  - Identify any coverage gaps introduced in the renewal
+  - Document coverage changes for your client file
+
+  You can download the comparison as a report or screenshot it for your records.
+
+</Steps>
+
+<Note>
+  Renewal reminder email drafts pull the client's address from the **primary email** field on the customer profile. If the **To** field is blank when you preview the draft, the customer profile does not yet have an email address saved. Open the **Database** page, go to the Customers tab, find the customer, and add their email before returning to the Renewals page.
+</Note>
+
+<Tip>
+  Run the renewal workflow **at least once a week**. Checking in weekly keeps you comfortably inside the 30-day warning window for most of your book, which gives you enough lead time to get new declarations pages from carriers and complete the upload-and-compare process before the policy actually lapses.
+</Tip>

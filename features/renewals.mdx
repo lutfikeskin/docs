@@ -1,0 +1,113 @@
+---
+title: "Track Policy Renewals and Send Reminders"
+sidebarTitle: "Renewals"
+description: "The Renewals page shows expiring policies in urgency buckets, lets you draft renewal reminder emails, and logs contact history for your book of business."
+---
+
+Retention is the lifeblood of an insurance book, and retention starts with timely outreach before policies lapse. The Renewals page is purpose-built for that workflow: it surfaces every policy that needs attention in the next 60 days (plus any that have already expired), organizes them by urgency, and gives you a one-click path to draft a personalized reminder email or log a contact record — all without leaving the app.
+
+You'll never need to run a manual expiration report again. The Renewals page is always current, always sorted by what matters most, and always ready to show you exactly how many premium dollars are at risk right now.
+
+## KPI Bar
+
+Four metrics at the top of the page give you an instant read on the state of your renewal pipeline.
+
+<CardGroup cols={4}>
+  <Card title="Needs attention now" icon="circle-exclamation">
+    The combined count of overdue policies and those expiring within the next 14 days. This is your daily priority number.
+  </Card>
+  <Card title="In 60-day window" icon="calendar">
+    Every policy grouped on this page — overdue, urgent, warning, and watch buckets combined.
+  </Card>
+  <Card title="Premium at risk" icon="circle-dollar-to-slot">
+    The sum of premiums across all overdue and urgent policies. This is the revenue you stand to lose if these policies lapse without renewal.
+  </Card>
+  <Card title="Contact logs this week" icon="phone">
+    The count of contact log entries created in the past 7 days across any method (phone, email, text, etc.). Tracks your team's outreach cadence at a glance.
+  </Card>
+</CardGroup>
+
+## Urgency Buckets
+
+Below the KPI bar, policies are grouped into four expandable buckets ordered from most to least urgent. Each bucket shows a sortable table with the customer name, carrier, policy number, type, premium, expiration date, days remaining, and the date of the last recorded contact.
+
+### ⚪ Overdue
+
+These policies have already passed their expiration date. Coverage may have lapsed. If a backdated renewal or retroactive extension is still possible with the carrier, these are your highest-priority calls. Act immediately.
+
+### 🔴 Urgent — expiring within 14 days
+
+You have a very narrow window to act. Contact these customers today. Once a policy drops below two weeks to expiration, the underwriting timeline for a clean renewal becomes tight and the client may face a gap in coverage if you wait.
+
+### 🟡 Warning — expiring in 15–30 days
+
+Plan your outreach over the next week or two. These customers are in a comfortable renewal window — enough time to gather updated information, get quotes from multiple carriers, and present options before the deadline.
+
+### 🔵 Watch — expiring in 31–60 days
+
+On your radar, not yet urgent. A heads-up email is appropriate, but there's no need to rush. Use this bucket for planning and scheduling — if you know a client will need fleet changes at renewal, now is the time to start that conversation.
+
+## Drafting a Renewal Email
+
+For any policy in any bucket, you can generate and customize a renewal reminder email in seconds.
+
+<Steps>
+  <Step title="Select a policy row">
+    Click any row in a bucket table to select it. The action panel appears immediately below the table, showing the selected customer's name, policy number, and the most recent contact log entry.
+  </Step>
+  <Step title="Click Preview Reminder Email">
+    Click the **📧 Preview Reminder Email** button to open the draft dialog. The system automatically generates a personalized draft based on the extracted policy data — including the insured name, policy number, carrier, expiration date, and your agency name.
+  </Step>
+  <Step title="Review and edit the draft">
+    The dialog shows three editable fields:
+
+    - **To** — pre-filled if the insured's email was captured during extraction; otherwise blank for you to fill in
+    - **Subject** — a professional subject line you can adjust
+    - **Body** — the full email body, editable in place
+
+    Edit any field directly before downloading or logging.
+  </Step>
+  <Step title="Download or log the draft">
+    Two actions are available at the bottom of the dialog:
+
+    - **⬇️ Download .txt** — saves the current body as a plain-text file so you can paste it into your email client
+    - **✅ Log as 'email\_draft' contact** — records a `email_draft` contact log entry for this policy, capturing the recipient address in the notes, without actually sending anything
+  </Step>
+</Steps>
+
+<Info>
+  The email draft is generated from the data in your database. If the extracted insured name or expiration date looks wrong in the draft, edit the policy in the [Database](/features/database) first, then re-open the draft.
+</Info>
+
+## Logging Contact
+
+You don't always need to draft an email — sometimes you called the client, texted them, or reached out through another channel. The **Log contact (skip email)** option records that outreach without generating a draft.
+
+<Steps>
+  <Step title="Select a policy row">
+    Click any row to open the action panel.
+  </Step>
+  <Step title="Expand Log contact (skip email)">
+    Click the **Log contact (skip email)** expander in the action panel.
+  </Step>
+  <Step title="Choose a method and add notes">
+    Select a contact method from the dropdown — **phone**, **manual**, or **other** — and optionally add a note in the text area. For example: *"Left voicemail, will retry Thursday"*.
+  </Step>
+  <Step title="Click Log contact">
+    Click the **Log contact** button. A confirmation toast confirms the log was saved. The **Contact logs this week** KPI and the **Last contacted** column in the bucket table update immediately.
+  </Step>
+</Steps>
+
+## Contacted This Week
+
+The **Contact logs this week** KPI counts every `NotificationLog` entry created in the past 7 days across all methods and all policies — not just the ones currently visible in a bucket. This means it includes:
+
+- Calls, emails, and texts logged from the Renewals page
+- Email drafts logged via the draft dialog
+- Any contact logged for a policy that has since moved out of the 60-day window
+
+Use this number as a team productivity signal. A healthy book typically sees consistent weekly outreach activity in the lead-up to peak renewal seasons.
+
+<Tip>
+  Sort the bucket table by the **Premium** column (click the column header) to float your highest-value policies to the top. Prioritizing renewals by premium at risk ensures that if you can only make ten calls today, they go to the clients whose retention matters most to your revenue.
+</Tip>

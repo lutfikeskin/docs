@@ -1,47 +1,85 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "Get Started with Insurance Doc Intelligence"
+sidebarTitle: "Quickstart"
+description: "Install Insurance Doc Intelligence, configure your Gemini API key, and extract your first insurance policy PDF in under 10 minutes."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
-
-## Prerequisites
-
-Before you begin, you must have:
-
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
-
-## Get started
+This guide walks you through installing the application, wiring up your Gemini API key, and running your first policy extraction from start to finish. Plan for about ten minutes if you already have Python 3.9+ installed and a Gemini API key on hand.
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  <Step title="Install dependencies">
+    Make sure you are running **Python 3.9 or later**, then install all required packages from the project root:
 
     ```bash
-    npm install your-package
+    pip install -r requirements.txt
     ```
+
+    This pulls in Streamlit, SQLAlchemy, the Google Generative AI client, PDF utilities, and every other library the application depends on.
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
 
-    ```bash
-    your-cli init
-    ```
+  <Step title="Configure your Gemini API key">
+    The extraction engine calls the Gemini API, so you need to make your key available before uploading a PDF. You have two options:
+
+    **Option A — Environment variable (recommended for local use)**
+
+    <CodeGroup>
+      ```powershell PowerShell
+      $env:GEMINI_API_KEY="your_key"
+      ```
+
+      ```bash Bash / Zsh
+      export GEMINI_API_KEY="your_key"
+      ```
+    </CodeGroup>
+
+    Set this before you run the app, and it will be picked up automatically at startup.
+
+    **Option B — Settings dialog inside the app**
+
+    If you prefer not to set an environment variable, open the app first (see the next step), click **⚙️ Settings** at the bottom of the sidebar, paste your key into the **Gemini API Key** field, and click **Save**. The key is stored in your browser session for the rest of that tab's lifetime.
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
+
+  <Step title="Run the application">
+    From the project root, start the Streamlit server:
 
     ```bash
-    your-cli start
+    streamlit run app.py
     ```
+
+    Streamlit prints a local URL — usually **http://localhost:8501** — and opens it in your default browser automatically. If the browser does not open, copy the URL from the terminal and paste it yourself.
+  </Step>
+
+  <Step title="Upload your first PDF">
+    In the sidebar, click **Process Policies**. On the page that opens:
+
+    1. Click **Browse files** (or drag and drop) to select a declarations page PDF from your computer.
+    2. The app uploads the file and sends it to the extraction pipeline.
+    3. A spinner indicates that extraction is in progress — this typically takes five to fifteen seconds depending on PDF length.
+  </Step>
+
+  <Step title="Review and save">
+    Once extraction finishes, the review form appears with every field the engine found. Work through the form top to bottom:
+
+    - Fields shown with values were extracted with sufficient confidence — verify them and correct anything that looks wrong.
+    - Blank fields were cleared by the confidence gate, which means the engine was not sure enough to pre-fill them — type the correct values in manually.
+
+    When the form looks right, click **Save**. The policy record is written to your local database and you will see a success confirmation.
+  </Step>
+
+  <Step title="Generate a COI">
+    With the policy saved, you can produce a Certificate of Insurance immediately:
+
+    1. Click **Create COI** in the sidebar.
+    2. Search for the policy you just saved by insured name or policy number.
+    3. Select a certificate holder from the dropdown (populated from your holders list), or type holder details manually.
+    4. Click **Generate COI** and then **Download** to save the filled PDF to your computer.
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+<Note>
+  PDF extraction requires an active Gemini API key. However, you can browse the policy database, run comparisons, and generate COIs from policies that are already saved — all without a key configured.
+</Note>
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
+<Tip>
+  Want to tune extraction quality, cap daily API spend, or pre-load your certificate holders list? See the [Configuration](/configuration) guide for all available settings.
 </Tip>

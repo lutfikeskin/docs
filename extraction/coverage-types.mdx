@@ -1,0 +1,136 @@
+---
+title: "Insurance Coverage Types Extracted by the Engine"
+sidebarTitle: "Coverage Types"
+description: "Reference guide to the insurance coverage families and codes recognized and extracted by Insurance Doc Intelligence's AI engine."
+---
+
+The extraction engine recognizes a structured set of coverage families and maps document text to canonical coverage codes during extraction. Rather than storing raw text like "Bodily Injury and Property Damage — $1,000,000 CSL," the engine normalizes each coverage line to a well-defined code (such as `AUTO_LIAB_CSL`) with a structured limit object. This makes coverages queryable, comparable across policies, and ready for downstream workflows.
+
+## Coverage Families and Codes
+
+<Tabs>
+  <Tab title="Auto Liability">
+    Auto liability coverages apply to `personal_auto` and `commercial_auto` policies. They represent the insured's liability for bodily injury and property damage caused to others.
+
+    | Code | Description |
+    |---|---|
+    | `AUTO_LIAB_CSL` | Combined Single Limit — a single limit covering both BI and PD |
+    | `AUTO_LIAB_BI` | Bodily Injury split-limit (per person / per occurrence) |
+    | `AUTO_LIAB_PD` | Property Damage split-limit |
+    | `HIRED_AUTO` | Hired auto liability — covers vehicles rented or leased for business use |
+    | `NON_OWNED_AUTO` | Non-owned auto liability — covers employees using personal vehicles |
+    | `HIRED_AUTO_PD` | Physical damage for hired autos |
+    | `TRAILER_INTERCHANGE` | Trailer interchange liability (common in trucking) |
+  </Tab>
+  <Tab title="UM/UIM">
+    Uninsured and underinsured motorist coverages protect the insured when the at-fault party has no insurance or insufficient coverage. Codes vary by state formatting.
+
+    | Code | Description |
+    |---|---|
+    | `UM_BI` | Uninsured motorist bodily injury |
+    | `UM_CSL` | Uninsured motorist combined single limit |
+    | `UM_PD` | Uninsured motorist property damage |
+    | `UIM_BI` | Underinsured motorist bodily injury |
+    | `UIM_CSL` | Underinsured motorist combined single limit |
+    | `UMUIM_CSL` | Combined UM/UIM — single limit (common in TX, OH) |
+    | `UMUIM_BI` | Combined UM/UIM — bodily injury |
+    | `UMUIM_PD` | Combined UM/UIM — property damage |
+  </Tab>
+  <Tab title="Physical Damage">
+    Physical damage coverages apply to specific vehicles and are typically linked to a VIN on the declarations page.
+
+    | Code | Description |
+    |---|---|
+    | `COMP` | Comprehensive — damage from non-collision events (theft, weather, etc.) |
+    | `COLL` | Collision — damage from collision with another object |
+    | `RENTAL` | Rental reimbursement coverage |
+    | `TOWING` | Towing and labor coverage |
+    | `GAP` | GAP coverage — covers the difference between ACV and loan balance |
+    | `FULL_SAFETY_GLASS` | Full glass coverage with no deductible |
+    | `LOAN_LEASE_COVERAGE` | Loan/lease payoff coverage |
+  </Tab>
+  <Tab title="Medical / PIP">
+    Medical and personal injury protection coverages pay for injury-related expenses regardless of fault.
+
+    | Code | Description |
+    |---|---|
+    | `MED_PAY` | Medical payments — covers medical expenses for occupants of the insured vehicle |
+    | `PIP` | Personal Injury Protection — broader than Med Pay; common in no-fault states (FL, NY, NJ) |
+  </Tab>
+  <Tab title="General Liability">
+    GL coverages apply to `general_liability`, `bop`, and `commercial_package` policies. They cover third-party bodily injury, property damage, and other liability exposures arising from business operations.
+
+    | Code | Description |
+    |---|---|
+    | `GL_OCCURRENCE` | Each occurrence limit |
+    | `GL_AGGREGATE` | General aggregate limit |
+    | `GL_PRODUCTS_COMP_OPS` | Products and completed operations aggregate |
+    | `GL_PERSONAL_ADV_INJURY` | Personal and advertising injury limit |
+    | `GL_DAMAGE_RENTED_PREM` | Damage to rented premises (fire legal liability) |
+    | `GL_MEDICAL_EXPENSE` | Medical expense limit (per person) |
+    | `GL_EMPLOYEE_BENEFITS` | Employee benefits liability |
+  </Tab>
+  <Tab title="Cargo">
+    Cargo coverages apply to `motor_truck_cargo` and `commercial_package` policies. They protect the value of freight in transit.
+
+    | Code | Description |
+    |---|---|
+    | `CARGO_LEGAL_LIAB` | Cargo legal liability — carrier's legal liability for cargo loss or damage |
+    | `CARGO_BROAD_FORM` | Broad form cargo — broader coverage than legal liability |
+    | `CARGO_REEFER` | Reefer breakdown coverage — temperature-sensitive cargo |
+  </Tab>
+  <Tab title="Umbrella / Excess">
+    Umbrella and excess liability coverages sit above underlying policy limits.
+
+    | Code | Description |
+    |---|---|
+    | `UMBRELLA_OCCURRENCE` | Umbrella each occurrence limit |
+    | `UMBRELLA_AGGREGATE` | Umbrella aggregate limit |
+    | `EXCESS_LIABILITY` | Excess liability (follows form over an underlying policy) |
+  </Tab>
+</Tabs>
+
+## Auto Liability CSL Supremacy
+
+For `personal_auto` and `commercial_auto` policies, the engine applies an **auto liability CSL supremacy rule** during normalization. If both a Combined Single Limit (`AUTO_LIAB_CSL`) and split-limit entries (`AUTO_LIAB_BI` and `AUTO_LIAB_PD`) exist in the same extraction result, the split-limit entries are automatically pruned.
+
+This prevents duplicate limit rows from appearing on the review form when a declarations page happens to list both formats. The CSL entry is always kept as the authoritative record.
+
+## State-Specific Notes
+
+When the policy state is known, the engine injects state-specific extraction hints to improve mapping accuracy for ambiguous coverage names. Here is a brief summary of the states with notable extraction guidance:
+
+- **Texas (TX)** — UM/UIM frequently appears as a single combined item; the engine prefers the `UMUIM_*` code family in those cases.
+- **Florida (FL)** — PIP is commonly present on auto declarations; UM and UIM are typically listed separately.
+- **New York (NY)** — UIM may appear as `SUM` (Supplementary Uninsured/Underinsured Motorist); PIP is common on auto declarations.
+- **New Jersey (NJ)** — Policies may use `Basic` or `Standard` naming variants for coverage tiers.
+- **Pennsylvania (PA)** — `Full Tort` or `Limited Tort` tort selections may appear and are preserved when present.
+- **California (CA)** — UM and UIM are frequently listed separately rather than combined.
+- **Ohio (OH)** — UM/UIM combined formatting is common; the engine treats these similarly to TX.
+
+These hints are applied as extraction guidance only — they do not enforce compliance checks or minimum legal limits.
+
+## Coverage Limits Format
+
+Every extracted coverage entry includes a structured limits object. Depending on the coverage type, some fields will be populated and others will be `null`.
+
+```json
+{
+  "coverage_code": "GL_OCCURRENCE",
+  "per_occurrence": 1000000,
+  "aggregate": null,
+  "combined_single_limit": null,
+  "deductible": null
+}
+```
+
+| Limit Field | Applies To |
+|---|---|
+| `per_occurrence` | Most liability coverages — the maximum paid per single event |
+| `aggregate` | GL and umbrella coverages — the maximum paid across all claims in the policy period |
+| `combined_single_limit` | Auto liability CSL (`AUTO_LIAB_CSL`) and some UM/UIM codes |
+| `deductible` | Physical damage coverages — the amount the insured pays before coverage applies |
+
+<Info>
+  Coverage eligibility is validated against the detected (or overridden) policy type. A physical damage coverage such as `COMP` or `COLL` on a `general_liability` policy is automatically excluded from the extraction result — it will not appear on the review form. This prevents cross-line contamination when a multi-page document includes both GL and auto sections.
+</Info>

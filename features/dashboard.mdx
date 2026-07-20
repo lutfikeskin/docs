@@ -1,0 +1,70 @@
+---
+title: "Insurance Portfolio Dashboard Overview"
+sidebarTitle: "Dashboard"
+description: "The Dashboard gives you a real-time overview of your entire insurance portfolio — total policies, vehicles, premium, and expiration alerts."
+---
+
+The Dashboard is your command center for the book of business. Every time you open Insurance Doc Intelligence, it greets you with a live snapshot of the entire portfolio: how many policies you hold, how many vehicles are on file, the total premium under management, and — most critically — which policies are approaching expiration. Instead of hunting across spreadsheets or digging through carrier portals, you get the information that drives daily decisions in a single view.
+
+## Key Metrics
+
+Three summary cards sit at the top of the page and update in real time as you add or edit policies.
+
+<CardGroup cols={3}>
+  <Card title="Total Policies" icon="file-contract">
+    The count of every policy record saved in your database, regardless of status or type.
+  </Card>
+  <Card title="Total Vehicles" icon="truck">
+    The sum of all vehicles attached to every policy — useful for a quick sense of fleet size across your commercial book.
+  </Card>
+  <Card title="Total Premium" icon="circle-dollar-to-slot">
+    The aggregate premium across all policies, formatted as a dollar amount. This is the gross premium at risk figure for your entire book.
+  </Card>
+</CardGroup>
+
+## Expiration Alerts
+
+The Expiration Alerts section is the most action-oriented part of the Dashboard. It divides upcoming expirations into two buckets so you can triage at a glance.
+
+<CardGroup cols={2}>
+  <Card title="Expiring within 30 days" icon="circle-exclamation" color="#dc3545">
+    Displayed with a **red** error banner. Each expiring policy is listed with its policy number, insured name, carrier, exact expiration date, and the number of days remaining. This bucket demands immediate outreach.
+  </Card>
+  <Card title="Expiring in 31–60 days" icon="triangle-exclamation" color="#ffc107">
+    Displayed with an **orange** warning banner. These policies are on the horizon — start renewal conversations now so you have runway before coverage lapses.
+  </Card>
+</CardGroup>
+
+Each bucket is expandable. Click **View expiring policies** or **View upcoming expirations** to see the full list. From there, you can navigate directly to the [Renewals](/features/renewals) page to draft reminder emails and log contact history.
+
+<Info>
+  If no policies are expiring in the next 60 days, the Dashboard replaces the alert section with a green confirmation banner so you know the all-clear is genuine and not just an empty state.
+</Info>
+
+## Policy Timeline
+
+Below the alerts, the **Expiration Timeline (Next 6 Months)** bar chart shows how many policies expire in each calendar month over the coming half-year. This helps you spot bottlenecks — for example, a month where a large chunk of the book rolls over at once — so you can front-load outreach rather than scrambling when the cluster arrives.
+
+Each bar represents a single month. Hover over a bar to see the exact count. If no policies are expiring in a given month, that month is omitted from the chart.
+
+## Coverage Distribution
+
+The **Policies by Carrier** bar chart gives you a breakdown of how your book is distributed across carriers. Each bar represents one carrier, and the height reflects the number of policies written with that carrier. Use this view to spot concentration risk — if a single carrier dominates the chart, a rate change or capacity pullback there will have an outsized impact on your clients.
+
+## Recent Activity
+
+The Recent Activity feed on the lower-left of the Dashboard shows the five most recently saved or updated policies, each displayed with:
+
+- **Policy number** — the primary identifier
+- **Insured name** and **carrier** — quick identity at a glance
+- **Time of save** — the timestamp from when the record was last written
+
+This feed is particularly useful when multiple users are working in the same workspace. You can confirm that a colleague's extraction landed correctly without opening the Database page.
+
+## Quick Lookup
+
+A **Quick Lookup** widget sits alongside Recent Activity. Type any part of a policy number or insured name and a matching list appears immediately. Select a policy from the list to edit it in place or jump straight to COI creation — without leaving the Dashboard.
+
+<Tip>
+  Make it a habit to open the Dashboard at the start of each working day. The Expiration Alerts section will immediately tell you whether any policies crossed into the 30-day red zone overnight — giving you a head start on renewal calls before the rest of the day fills up.
+</Tip>

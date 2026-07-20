@@ -1,0 +1,386 @@
+---
+title: "PolicyService API Reference"
+sidebarTitle: "PolicyService"
+description: "Complete reference for PolicyService methods: search, CRUD, duplicate detection, update previews, dashboard metrics, and natural language queries."
+---
+
+`PolicyService` is the primary service class for working with insurance policy records. It handles the full policy lifecycle — from initial extraction and duplicate detection through manual edits, renewal tracking, and deletion — as well as customer linking and natural language data queries.
+
+Instantiate it with a SQLAlchemy session:
+
+```python services/policy_setup.py
+from core.database import get_session, init_db
+from core.services import PolicyService
+
+engine = init_db()
+session = get_session(engine)
+service = PolicyService(session)
+```
+
+---
+
+### `get_dashboard_metrics()`
+
+Returns high-level aggregate statistics for the dashboard summary panel.
+
+**Returns:** `tuple[int, int, float]` — `(total_policies, total_vehicles, total_premium)`
+
+| Position | Type | Description |
+|---|---|---|
+| `total_policies` | `int` | Total number of policy records in the database |
+| `total_vehicles` | `int` | Total number of vehicle records across all policies |
+| `total_premium` | `float` | Sum of all policy premiums, parsed from stored currency strings |
+
+```python
+total_policies, total_vehicles, total_premium = service.get_dashboard_metrics()
+
+print(f"Policies:  {total_policies}")
+print(f"Vehicles:  {total_vehicles}")
+print(f"Premium:   ${total_premium:,.2f}")
+```
+
+---
+
+### `search_policies(term, limit, offset)`
+
+Returns policies whose `policy_number` or `insured_name` contains the search term (case-insensitive). When `term` is empty or whitespace, returns the most recent policies up to `limit`.
+
+<ParamField path="term" type="str">
+  Search query string. Matched against `policy_number` and `insured_name` using a SQL `LIKE` filter. Pass `None` or an empty string to retrieve the most recent policies without filtering.
+</ParamField>
+
+<ParamField path="limit" type="int" default="100">
+  Maximum number of results to return. Defaults to `100`. Use together with `offset` for pagination.
+</ParamField>
+
+<ParamField path="offset" type="int" default="0">
+  Number of records to skip before returning results. Defaults to `0`.
+</ParamField>
+
+**Returns:** `list[Policy]` — Policy ORM objects sorted by `id` descending (newest first).
+
+```python
+# Search by insured name
+results = service.search_policies("Acme Trucking", limit=25, offset=0)
+for policy in results:
+    print(policy.policy_number, policy.insured_name)
+
+# Paginate through all policies
+page_size = 50
+page_2 = service.search_policies(None, limit=page_size, offset=page_size)
+```
+
+---
+
+### `count_policies(term)`
+
+Returns the total count of policies matching the same filters as `search_policies`, without loading the records. Use this to calculate pagination totals.
+
+<ParamField path="term" type="str">
+  Search query string. Uses the same `LIKE` filter logic as `search_policies`.
+</ParamField>
+
+**Returns:** `int` — number of matching policies.
+
+```python
+total = service.count_policies("Acme Trucking")
+page_size = 25
+total_pages = (total + page_size - 1) // page_size
+print(f"{total} matching policies across {total_pages} pages")
+```
+
+---
+
+### `get_policy_by_id(policy_id)`
+
+Retrieves a single policy by its integer primary key.
+
+<ParamField path="policy_id" type="int" required>
+  The database ID of the policy to retrieve.
+</ParamField>
+
+**Returns:** `Policy` object if found, or `None`.
+
+```python
+policy = service.get_policy_by_id(42)
+if policy:
+    print(policy.carrier_name, policy.effective_date)
+else:
+    print("Policy not found")
+```
+
+---
+
+### `get_policy_by_number(policy_number)`
+
+Retrieves a single policy by its policy number. The lookup uses normalized comparison (whitespace and case-insensitive) to handle minor formatting differences between stored and queried values.
+
+<ParamField path="policy_number" type="str" required>
+  The policy number string to look up.
+</ParamField>
+
+**Returns:** `Policy` object if found, or `None`.
+
+```python
+policy = service.get_policy_by_number("CA-2024-00123")
+if policy:
+    print(policy.insured_name, policy.expiration_date)
+```
+
+---
+
+### `save_policy_from_extraction(extraction_result)`
+
+Saves a policy from an extraction result dict returned by `process_pdf()`. This is the primary save path after document extraction.
+
+On save, this method:
+- Checks for an existing policy with the same normalized policy number.
+- If a match exists, **updates** the existing record and records change history. If the duplicate action is set to `"create_new"`, the save is blocked instead.
+- If no match exists, **inserts** a new policy record.
+- Runs `CustomerResolver` to create or link a customer profile based on the insured name.
+
+<ParamField path="extraction_result" type="dict" required>
+  The extraction result dict returned as the first element of the `process_pdf()` tuple. You may inject control keys into this dict before saving:
+
+  - `_duplicate_action` (`str`): set to `"create_new"` to block saving when the policy number already exists in the database.
+  - `_review_confirm_customer_id` (`int`): force the policy to link to a specific existing customer by ID.
+  - `_review_commercial_owner_name` (`str`): supply a human owner name for commercial policies where the insured name is a business entity.
+</ParamField>
+
+**Returns:** `tuple[bool, str]` — `(success, message)`. On conflict with `_duplicate_action="create_new"`, returns `(False, "Cannot create a new policy...")`.
+
+```python
+result, metadata, error = process_pdf(file_bytes=pdf_bytes, api_key=api_key)
+if not error:
+    success, message = service.save_policy_from_extraction(result)
+    print(message)
+```
+
+To block saving a duplicate policy number:
+
+```python
+result["_duplicate_action"] = "create_new"
+success, message = service.save_policy_from_extraction(result)
+# success is False if the policy number already exists
+```
+
+---
+
+### `detect_duplicate_for_extraction(extraction_result)`
+
+Analyses an extraction result dict and returns a structured duplicate detection report without making any changes to the database. Call this before `save_policy_from_extraction` to drive review UI or automation logic.
+
+<ParamField path="extraction_result" type="dict" required>
+  The extraction result dict returned by `process_pdf()`.
+</ParamField>
+
+**Returns:** `dict` with a `status` key and supporting fields. Possible status values:
+
+<ResponseField name="status" type="str">
+  One of the following values:
+
+  - `new_policy` — no existing policy with a matching number was found; safe to save.
+  - `exact_match` — an exact policy number match exists; the incoming data matches the stored record closely.
+  - `same_number_conflict` — the policy number matches an existing record but carrier or other key fields differ significantly.
+  - `possible_related` — no number match but a related policy (same insured, nearby dates) was found.
+</ResponseField>
+
+```python
+dup = service.detect_duplicate_for_extraction(result)
+
+if dup["status"] == "new_policy":
+    service.save_policy_from_extraction(result)
+elif dup["status"] == "exact_match":
+    print("Updating existing policy record.")
+    service.save_policy_from_extraction(result)
+elif dup["status"] == "same_number_conflict":
+    print("Policy number conflict — manual review required.")
+```
+
+---
+
+### `preview_update_from_extraction(existing_policy, extraction_result)`
+
+Generates a non-mutating diff between an existing policy record and an incoming extraction result. Use this to show the user exactly what fields would change before committing an update.
+
+<ParamField path="existing_policy" type="Policy" required>
+  The existing `Policy` ORM object to compare against. Retrieve it with `get_policy_by_id` or `get_policy_by_number`.
+</ParamField>
+
+<ParamField path="extraction_result" type="dict" required>
+  The extraction result dict from `process_pdf()`.
+</ParamField>
+
+**Returns:** `dict` with the following keys:
+
+<ResponseField name="is_changed" type="bool">
+  `True` if any field difference was detected between the existing policy and the incoming extraction.
+</ResponseField>
+
+<ResponseField name="changes" type="list">
+  List of scalar field change dicts, each containing the field name, old value, and new value.
+</ResponseField>
+
+<ResponseField name="collection_changes" type="dict">
+  Dict with keys `vehicles`, `coverages`, `drivers`, and `additional_interests`. Each value is a bool indicating whether that collection would be replaced.
+</ResponseField>
+
+```python
+existing = service.get_policy_by_number("CA-2024-00123")
+preview = service.preview_update_from_extraction(existing, result)
+
+if preview["is_changed"]:
+    for change in preview["changes"]:
+        print(f"{change['field']}: {change['old']} → {change['new']}")
+else:
+    print("No changes detected.")
+```
+
+---
+
+### `update_policy(policy, updated_data)`
+
+Applies manual field updates to an existing policy and records the changes to the history log.
+
+<ParamField path="policy" type="Policy" required>
+  The `Policy` ORM object to update. Retrieve it first with `get_policy_by_id` or `search_policies`.
+</ParamField>
+
+<ParamField path="updated_data" type="dict" required>
+  A dict of field updates. You can pass a flat dict of scalar policy fields (legacy format) or a structured dict with nested keys `policy`, `vehicles`, `drivers`, `coverages`, and `additional_interests` (full payload format). When any of the nested keys are present, the full payload format is assumed.
+</ParamField>
+
+**Returns:** `tuple[bool, str]` — `(True, message)` always; the message describes how many changes were logged or reports that no changes were detected.
+
+```python
+policy = service.get_policy_by_id(42)
+
+# Flat scalar update
+success, msg = service.update_policy(policy, {
+    "carrier_name": "Acme Insurance Co.",
+    "premium": "$4,500.00",
+})
+print(msg)  # "Updated (2 changes logged)."
+```
+
+---
+
+### `delete_policy(policy)`
+
+Deletes a policy record and conditionally removes the linked customer profile.
+
+**Customer cleanup rules:**
+- If the deleted policy was the customer's **only** policy **and** the customer has no manual data (no `primary_email`, `primary_phone`, or manually entered name aliases), the customer profile is also deleted.
+- If the customer has other policies, manual contact data, or manually entered aliases, the customer profile is **retained**.
+
+<ParamField path="policy" type="Policy" required>
+  The `Policy` ORM object to delete.
+</ParamField>
+
+**Returns:** `dict` with deletion metadata:
+
+<ResponseField name="deleted_policy_number" type="str">
+  The policy number of the deleted record.
+</ResponseField>
+
+<ResponseField name="customer_cleanup" type="dict">
+  A dict describing what happened to the linked customer. Contains `deleted` (bool), `reason` (str), and optionally `customer_name` (str).
+
+  Possible `reason` values: `orphan_extraction_profile` (customer was deleted), `has_policies` (customer retained — other policies exist), `manual_or_contact_data` (customer retained — manual data present), `no_customer` (policy had no linked customer).
+</ResponseField>
+
+```python
+policy = service.get_policy_by_id(42)
+result = service.delete_policy(policy)
+
+print(f"Deleted: {result['deleted_policy_number']}")
+print(f"Customer cleanup: {result['customer_cleanup']['reason']}")
+```
+
+---
+
+### `get_expiring_policies(days)`
+
+Returns policies whose expiration date falls within the next `days` days from today.
+
+<ParamField path="days" type="int" default="30">
+  Look-ahead window in days. Defaults to `30`.
+</ParamField>
+
+**Returns:** `list[Policy]` sorted by `expiration_date` ascending.
+
+```python
+expiring_soon = service.get_expiring_policies(days=14)
+for policy in expiring_soon:
+    print(f"{policy.policy_number} expires {policy.expiration_date}")
+```
+
+---
+
+### `get_renewal_buckets()`
+
+Groups upcoming and recently expired policies into four urgency buckets for renewal tracking.
+
+**Returns:** `dict[str, list[Policy]]` with the following keys, each containing a list of `Policy` objects sorted by `expiration_date` ascending:
+
+<ResponseField name="overdue" type="list[Policy]">
+  Policies that expired within the last 30 days — recently lapsed but potentially still actionable for backdated renewals.
+</ResponseField>
+
+<ResponseField name="urgent" type="list[Policy]">
+  Policies expiring in 0–14 days. Shown with a 🔴 indicator in the UI.
+</ResponseField>
+
+<ResponseField name="warning" type="list[Policy]">
+  Policies expiring in 15–30 days. Shown with a 🟡 indicator in the UI.
+</ResponseField>
+
+<ResponseField name="watch" type="list[Policy]">
+  Policies expiring in 31–60 days. Shown with a 🔵 indicator in the UI.
+</ResponseField>
+
+```python
+buckets = service.get_renewal_buckets()
+
+print(f"Overdue:  {len(buckets['overdue'])}")
+print(f"Urgent:   {len(buckets['urgent'])}")
+print(f"Warning:  {len(buckets['warning'])}")
+print(f"Watch:    {len(buckets['watch'])}")
+
+for policy in buckets["urgent"]:
+    print(f"  {policy.policy_number} — {policy.insured_name} — expires {policy.expiration_date}")
+```
+
+---
+
+### `ask_your_data(user_query, api_key)`
+
+Translates a plain-English question into a SQL query using Gemini, executes it against the policy database, and returns the results. This method uses the `gemini-3.1-flash-lite` model and logs every call to `UsageService`.
+
+<ParamField path="user_query" type="str" required>
+  A natural language question about your policy data. Examples: `"Which carriers have the most policies?"`, `"Show me all commercial auto policies expiring this month."`, `"What is the average premium for general liability policies?"`.
+</ParamField>
+
+<ParamField path="api_key" type="str" required>
+  Your Google Gemini API key. See the [Authentication](/api/authentication) page for setup instructions.
+</ParamField>
+
+**Returns:** `tuple[list[dict] | None, str]` — `(rows, generated_sql)`. On error, `rows` is `None` and `generated_sql` contains an error message string. Only `SELECT` statements are permitted; the method rejects any generated query that is not a `SELECT`.
+
+```python
+rows, sql_or_error = service.ask_your_data(
+    user_query="How many policies does each carrier have?",
+    api_key="your-gemini-api-key",
+)
+
+if rows is None:
+    print(f"Query failed: {sql_or_error}")
+else:
+    print(f"Generated SQL: {sql_or_error}")
+    for row in rows:
+        print(row)
+```
+
+<Note>
+`ask_your_data` requires a valid Gemini API key. Each call consumes tokens and is logged by `UsageService`. If your daily budget is limited, consider checking `UsageService.is_over_budget()` before calling this method in automated workflows.
+</Note>

@@ -1,0 +1,76 @@
+---
+title: "Supported Insurance Document Types for Extraction"
+sidebarTitle: "Document Types"
+description: "Insurance Doc Intelligence classifies and extracts data from declarations pages, renewal docs, COIs, endorsements, and more."
+---
+
+Before extracting any policy data, the engine classifies the uploaded PDF into a recognized document type and routes it to the appropriate extraction strategy. Different document types use different extraction schemas — a full declarations page warrants comprehensive extraction, while a COI uses a smaller, focused prompt optimized for certificate-style layouts. Understanding how classification works helps you know what to expect from each upload.
+
+## Supported Document Types
+
+| Document Type | Display Name | Extractable | What Gets Extracted |
+|---|---|---|---|
+| `declarations_page` | **Declarations Page** | ✅ Yes | Full policy extraction — all fields, vehicles, drivers, coverages, and additional interests |
+| `renewal_declarations` | **Renewal Declarations Page** | ✅ Yes | Same as a declarations page; treated identically by the extraction engine |
+| `certificate_of_insurance` | **Certificate of Insurance (COI)** | ✅ Yes | Summary coverage data normalized to the standard policy shape |
+| `memorandum` | **Memorandum of Insurance** | ✅ Yes | Same as COI; uses the same specialized COI summary extraction schema |
+| `endorsement` | **Endorsement** | ✅ Yes | Endorsement metadata only (effective date, description, changes) |
+| `quote` | **Quote / Proposal** | ❌ No | Not extracted — quotes are pre-bind and limits may change |
+| `application` | **Application** | ❌ No | Not extracted — applications are pre-bind and do not represent actual coverage |
+| `unknown` | **Unknown** | ✅ Yes | Falls back to full policy extraction; the engine attempts to extract all standard fields |
+
+## COI and Memorandum Notes
+
+Certificates of Insurance and Memoranda of Insurance are common summary documents that don't follow the same layout as a full declarations page. The extraction engine handles them with a specialized, smaller prompt optimized for ACORD 25-style certificates and carrier-issued memoranda.
+
+Key behaviors for COI and memorandum extraction:
+
+- **Insured address fields are preserved.** When the model returns structured address fields (`insured_city`, `insured_state_code`, `insured_zip`), they are kept as-is. If only a single combined address line is returned, the engine attempts to split it for clear US address formats (for example, `5074 LINDORA DR COLUMBUS, OH 43232`).
+- **Med Pay included signals are preserved.** When a COI lists coverage as `MEDICAL PAYMENTS INCL` or a similar "included" notation, the engine preserves this as a textual `med_pay_limit` value rather than dropping it.
+- **Auto and GL liability flags are inferred.** The `has_general_liability` and `has_auto_liability` summary flags are derived from visible policy rows and limit values in the certificate. If no evidence is present, they default to `false`.
+- COI extraction results are normalized into the same standard policy shape used by declarations-page extractions, so the review and save workflow is identical regardless of document type.
+
+## Endorsement Notes
+
+When the engine classifies a document as an endorsement, it extracts endorsement metadata rather than a full policy record. Captured fields include the effective date, a description of the endorsement, and a summary of the changes it makes.
+
+<Accordion title="What endorsement extraction does and does not do">
+  **Does:**
+  - Capture the endorsement effective date, form number, and description
+  - Record the nature of the change (coverage addition, removal, modification, etc.)
+  - Present the metadata for your review on the Process Policies screen
+
+  **Does not:**
+  - Replace or update an existing policy record in your database automatically
+  - Re-extract the full policy from the endorsement alone
+  - Validate whether the endorsement is consistent with a previously saved policy
+
+  You can review an extracted endorsement alongside the original policy record and apply manual updates as needed.
+</Accordion>
+
+## Manual Policy Type Override
+
+The classification step determines two things independently: the **document type** (used for routing) and the **policy type** (used for schema selection and coverage validation).
+
+Even when the engine classifies both automatically, you can override the **policy type** on the review form before saving. This is useful when the engine guesses `unknown` or selects the wrong line of business. Supported policy types are:
+
+<CardGroup cols={2}>
+  <Card title="Personal Lines" icon="house">
+    - `personal_auto` — Personal auto policy
+    - `umbrella` — Personal or commercial umbrella
+  </Card>
+  <Card title="Commercial Lines" icon="building">
+    - `commercial_auto` — Commercial auto policy
+    - `general_liability` — General liability
+    - `bop` — Business Owner's Policy
+    - `commercial_package` — Commercial package policy
+    - `motor_truck_cargo` — Motor truck cargo
+    - `unknown` — Unclassified / fallback
+  </Card>
+</CardGroup>
+
+Changing the policy type override does **not** affect document classification. If the document was classified as a COI, it will continue to use the COI extraction schema regardless of the policy type you select. The policy type override only influences which coverage codes are considered eligible for that policy.
+
+<Warning>
+  Quote and application documents are not extractable. If you upload a quote or proposal, the engine will classify it correctly but return a non-extractable response — no policy data will be produced. To extract policy data, upload a bound declarations page or renewal declarations instead.
+</Warning>

@@ -1,0 +1,89 @@
+---
+title: "Generate a Single Certificate of Insurance"
+sidebarTitle: "Single COI"
+description: "Step-by-step guide to generating one ACORD 25 Certificate of Insurance from a saved policy in Insurance Doc Intelligence."
+---
+
+The **Create COI** page lets you generate a single ACORD 25 Certificate of Insurance for one certificate holder using data already saved in your policy records. You choose the policy, fill in or quick-fill the holder's details, confirm which coverage sections apply, and download the PDF — all without re-keying policy information by hand.
+
+<Steps>
+
+  <Step title="Navigate to Create COI">
+    Open the **Create COI** page from the left sidebar. The page loads with a policy search box and an empty certificate holder form.
+  </Step>
+
+  <Step title="Search and select the policy">
+    Type the insured's name or policy number into the **Search policies** box. The list filters as you type and shows up to the configured search limit. If there are more matches than the display limit, a caption tells you how many total results exist — refine your search term to narrow the list. Click the policy row in the **Select Policy** dropdown to load it. The page confirms the selected insured name and policy number in an info banner.
+  </Step>
+
+  <Step title="Enter certificate holder details">
+    Fill in the **Holder Name**, **Address**, **City**, **State**, and **ZIP** fields under **Certificate Holder Details**. All five fields are free-text.
+
+    Alternatively, use the **Quick Fill from Company List** dropdown to select a saved company — this pre-fills all five holder fields automatically from your stored company data. See [Quick-Fill Certificate Holders](#quick-fill-certificate-holders) below for details.
+  </Step>
+
+  <Step title="Choose the COI type">
+    Select the appropriate **COI Type** using the radio buttons:
+
+    - **Additional Insured** — standard COI; the ADDL INSD column is marked "Y" and the description includes a clause noting the holder is also listed as an additional insured.
+    - **Certificate Holder** — drops the additional insured clause and clears the ADDL INSD column.
+    - **Lienholder** — designed for loss payee situations; the Motor Truck Cargo section is replaced with Comp/Coll deductible information, and you must select the specific vehicles covered by the Loss Payee clause from a multiselect list.
+  </Step>
+
+  <Step title="Toggle coverage sections">
+    Under **Coverages to Include**, you will see three checkboxes:
+
+    - **General Liability** — pre-checked if the policy has a GL coverage record. When enabled, an additional radio button lets you set the general aggregate to **$1,000,000** or **$2,000,000**; the default is selected automatically based on the limit text in the policy.
+    - **Automobile Liability** — pre-checked if the policy has an auto liability record.
+    - **Motor Truck Cargo** — pre-checked if the policy has a non-empty cargo limit. This checkbox is disabled for Lienholder COIs.
+
+    These toggles are pre-set from extracted policy data, but you can change them before generating. Only sections you check will appear on the COI.
+  </Step>
+
+  <Step title="Customize the operations description (optional)">
+    The **Operations Description** text area is pre-populated with a description built from the policy — including vehicle list, driver list, radius of operation, and a type-specific clause (e.g., "Certificate Holder is also listed as an additional insured"). You can edit this text freely before generating.
+
+    If the description is long, use the **Description Font Size** slider to reduce the font size (range: 4–12 pt, default: 8 pt) so the text fits within the COI field without being cut off.
+  </Step>
+
+  <Step title="Click 'Generate & Download PDF'">
+    Click the **Generate & Download PDF** button. The system fills the ACORD 25 template with all policy and holder data, applies your coverage selections, and renders the PDF. A success message appears when generation is complete, followed by a download button.
+
+    If the **Holder Name** field is empty, the system shows an error and does not generate until you provide a name. For Lienholder COIs, at least one vehicle must be selected.
+  </Step>
+
+  <Step title="Download the PDF">
+    Click **📥 Download COI PDF** to save the file. The file is named:
+
+    ```
+    COI - Insured Name - Certificate Holder Name.pdf
+    ```
+
+    The file is ready to send directly to the certificate holder.
+  </Step>
+
+</Steps>
+
+## Quick-Fill Certificate Holders
+
+The **Quick Fill from Company List** dropdown is populated from two sources that are loaded at startup:
+
+- `data/Additionalinsuredcomps.xlsx` — your primary company list
+- `data/coi_holders.json` — a supplementary JSON list of saved holders
+
+When you select a company from the dropdown, the **Holder Name**, **Address**, **City**, **State**, and **ZIP** fields are all pre-filled instantly. The holder form fields remain editable after quick-fill, so you can make one-off corrections without modifying the saved list.
+
+If a company you need is not in the list, fill in the holder fields manually. To make a company available for future quick-fill and bulk generation, add it to `data/coi_holders.json` or the Excel file.
+
+## Insurer Name on the COI
+
+The insurer name that appears on the printed COI is resolved in a specific order:
+
+1. **Legal entity name** (`underwriter_name`) — used when present; this is the name of the underwriting carrier as it appears on the policy declarations.
+2. **Carrier brand name** (`carrier_name`) — used as a fallback when no underwriter name is recorded.
+
+This ensures the COI reflects the legally accurate insuring entity rather than a marketing brand name, which is important for compliance and claims purposes.
+
+<Tip>
+  Before clicking **Generate & Download PDF**, verify that the coverage section toggles match what is actually written on the underlying policy. Sending a COI that shows a coverage section the policy does not include creates liability for your agency and could void the certificate. When in doubt, pull up the original policy document and cross-check the sections side by side.
+</Tip>

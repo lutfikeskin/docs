@@ -1,0 +1,285 @@
+---
+title: "UsageService API Reference for Tracking Gemini Costs"
+sidebarTitle: "Usage Service"
+description: "Monitor and manage your daily Gemini API spend, call counts, and token usage with UsageService."
+---
+
+`UsageService` tracks every extraction and query call's token usage and estimated cost against a configurable daily budget. Use it to monitor spend in real time, surface usage data in your own tooling, and prevent budget overruns before triggering batch extractions.
+
+---
+
+## Instantiation
+
+```python
+from core.database import get_session, init_db
+from core.services import UsageService
+
+engine = init_db()
+session = get_session(engine)
+usage_service = UsageService(session)
+```
+
+<ParamField path="session" type="Session" required>
+  A SQLAlchemy `Session` bound to the application database. Obtain one via
+  `get_session(init_db())`. All `UsageService` methods read from and write to
+  the `api_usage` table through this session.
+</ParamField>
+
+---
+
+## Methods
+
+### `get_daily_usage()`
+
+Returns the total USD cost of all API calls made today.
+
+**Returns:** `float` — cumulative cost in US dollars for the current day, measured from midnight in **US Eastern Time**.
+
+```python
+daily_spend = usage_service.get_daily_usage()
+print(f"Today's spend: ${daily_spend:.4f}")
+```
+
+<Info>
+  All `ApiUsage` timestamps are stored as UTC-naive datetimes. `get_daily_usage`
+  converts Eastern midnight to its UTC equivalent before querying, so the
+  daily window resets at midnight Eastern regardless of your server's local timezone.
+</Info>
+
+---
+
+### `get_todays_call_count()`
+
+Returns the number of API calls (extractions, classifications, SQL queries, etc.) logged today.
+
+**Returns:** `int` — total call count since Eastern midnight.
+
+```python
+call_count = usage_service.get_todays_call_count()
+print(f"Calls today: {call_count}")
+```
+
+---
+
+### `get_todays_token_stats()`
+
+Returns a breakdown of input and output tokens consumed today.
+
+**Returns:** `tuple[int, int]` — `(input_tokens, output_tokens)` summed across all calls since Eastern midnight.
+
+```python
+input_tokens, output_tokens = usage_service.get_todays_token_stats()
+print(f"Tokens in: {input_tokens:,}  |  Tokens out: {output_tokens:,}")
+```
+
+<Info>
+  Input tokens include any cached context tokens. See `log_usage` below for
+  how the cost of cached vs. fresh input tokens is accounted for separately.
+</Info>
+
+---
+
+### `is_over_budget(budget=None)`
+
+Checks whether today's spend has reached or exceeded a daily budget limit.
+
+<ParamField path="budget" type="float" default="DEFAULT_DAILY_BUDGET ($2.50)">
+  The daily spend ceiling in US dollars. When omitted, the caller is expected
+  to pass `DEFAULT_DAILY_BUDGET` from `core/constants.py` (currently `2.50`).
+  The extraction pipeline passes this constant automatically — see the
+  [Default Budget](#default-budget) section below.
+</ParamField>
+
+**Returns:** `bool` — `True` if `get_daily_usage() >= budget`, `False` otherwise.
+
+```python
+from core.constants import DEFAULT_DAILY_BUDGET
+
+if usage_service.is_over_budget(DEFAULT_DAILY_BUDGET):
+    print("Daily budget reached — skipping extraction.")
+else:
+    # safe to proceed
+    pass
+```
+
+<Tip>
+  Call `is_over_budget(DEFAULT_DAILY_BUDGET)` before triggering any batch
+  extraction job. The extraction pipeline enforces this check automatically
+  for single-document flows, but batch loops that call the pipeline directly
+  should guard each iteration to avoid unexpected cost accumulation.
+</Tip>
+
+---
+
+### `log_usage(model_name, request_type, input_tokens, output_tokens, cost)`
+
+Records a single API call to the `api_usage` table.
+
+<ParamField path="model_name" type="str" required>
+  The Gemini model identifier (e.g. `"gemini-2.5-flash"`,
+  `"gemini-3.1-flash-lite"`). Used to look up the per-token pricing rate from
+  `UsageService.PRICING`.
+</ParamField>
+
+<ParamField path="request_type" type="str" required>
+  A short tag describing the call's purpose. Common values used internally are
+  `"extraction"`, `"classification"`, and `"query_sql"`. You can supply any
+  string — it is stored as-is and appears in the recent-usage table in Settings.
+</ParamField>
+
+<ParamField path="input_tokens" type="int" required>
+  Total prompt tokens for the call, **including** any tokens served from the
+  implicit context cache.
+</ParamField>
+
+<ParamField path="output_tokens" type="int" required>
+  Generated (completion) tokens returned by the model.
+</ParamField>
+
+<ParamField path="cached_input_tokens" type="int" default="0">
+  The subset of `input_tokens` that were served from the context cache.
+  The method computes cost as:
+
+  ```
+  cost = (input_tokens - cached_input_tokens) × input_rate
+       + cached_input_tokens × cached_input_rate
+       + output_tokens × output_rate
+  ```
+
+  Cached tokens are billed at roughly 10 % of the standard input rate,
+  matching Google's Agent Platform pricing tiers.
+</ParamField>
+
+**Returns:** The newly created `ApiUsage` ORM object (already committed to the database).
+
+<Warning>
+  `log_usage` is called automatically by the extraction pipeline and the
+  natural-language SQL query feature. You typically do not need to call this
+  method directly unless you are integrating a custom Gemini call outside the
+  standard pipeline.
+</Warning>
+
+---
+
+### `get_recent_usage(limit=10)`
+
+Returns the most recently logged API calls, newest first.
+
+<ParamField path="limit" type="int" default="10">
+  Maximum number of records to return.
+</ParamField>
+
+**Returns:** `list[ApiUsage]` — ORM objects ordered by `timestamp DESC`. Each record exposes:
+
+<ResponseField name="timestamp" type="datetime">
+  UTC-naive datetime when the call was logged.
+</ResponseField>
+
+<ResponseField name="model_name" type="str">
+  The Gemini model identifier used for the call.
+</ResponseField>
+
+<ResponseField name="request_type" type="str">
+  The tag supplied at log time (e.g. `"extraction"`, `"query_sql"`).
+</ResponseField>
+
+<ResponseField name="input_tokens" type="int">
+  Total prompt tokens (including cached).
+</ResponseField>
+
+<ResponseField name="output_tokens" type="int">
+  Generated tokens.
+</ResponseField>
+
+<ResponseField name="cost" type="float">
+  Estimated USD cost calculated at log time using the model's pricing table.
+</ResponseField>
+
+```python
+recent = usage_service.get_recent_usage(limit=5)
+for record in recent:
+    print(f"{record.timestamp}  {record.model_name}  {record.request_type}  ${record.cost:.6f}")
+```
+
+---
+
+### `clear_usage()`
+
+Deletes **all** records from the `api_usage` table, resetting every counter and cost total to zero.
+
+**Returns:** `tuple[bool, str]` — `(success, message)`.
+
+<ResponseField name="success" type="bool">
+  `True` if the table was cleared successfully; `False` if a database error
+  prevented the operation (the session is rolled back automatically).
+</ResponseField>
+
+<ResponseField name="message" type="str">
+  `"Usage logs cleared."` on success, or a SQLAlchemy error description on failure.
+</ResponseField>
+
+```python
+ok, msg = usage_service.clear_usage()
+print(msg)  # "Usage logs cleared."
+```
+
+<Warning>
+  `clear_usage` is a destructive, unrecoverable operation — it permanently
+  deletes the entire usage history, not just today's records. In the UI this
+  corresponds to the **Reset Daily Usage Meter** button in Settings.
+</Warning>
+
+---
+
+## Default Budget
+
+The default daily budget is **$2.50**, set as `DEFAULT_DAILY_BUDGET` in `core/constants.py`:
+
+```python title="core/constants.py"
+DEFAULT_DAILY_BUDGET = 2.50
+```
+
+This is a **soft limit**. When the daily spend reaches or exceeds this value:
+
+- A warning banner is shown in the sidebar.
+- The extraction pipeline (`gemini_transport.py`) raises a budget-exceeded error and stops processing new documents.
+- No extraction is permanently blocked at the database level — you can raise the limit at any time by editing `DEFAULT_DAILY_BUDGET` and restarting the application.
+
+To temporarily raise the ceiling for a batch job without editing the constant, pass a higher value directly to `is_over_budget`:
+
+```python
+# Allow up to $10 for a one-off bulk run
+if usage_service.is_over_budget(daily_limit=10.00):
+    raise RuntimeError("Even the elevated batch budget is exhausted.")
+```
+
+---
+
+## Usage in the Sidebar
+
+When a Gemini API key is active, the sidebar displays a live usage panel that auto-refreshes as you work. The panel shows:
+
+| Element | Source method |
+|---------|---------------|
+| **Spend** | `get_daily_usage()` |
+| **Calls** | `get_todays_call_count()` |
+| **Progress bar** | `get_daily_usage()` vs. `DEFAULT_DAILY_BUDGET` |
+| **Tokens In / Out** | `get_todays_token_stats()` |
+
+All figures reflect Eastern Time midnight as the day boundary, so the meter resets at the start of each business day regardless of where your server is hosted.
+
+---
+
+## Supported Models and Pricing
+
+`UsageService` ships with built-in per-token pricing for the following models. Calls using an unrecognised model name fall back to the `"default"` rates (matching `gemini-3.1-flash-lite`).
+
+| Model | Input (per 1M tokens) | Output (per 1M tokens) | Cached Input |
+|-------|----------------------|------------------------|--------------|
+| `gemini-3.1-flash-lite` | $0.25 | $1.50 | $0.025 |
+| `gemini-2.5-flash` | $0.30 | $2.50 | $0.03 |
+| `gemini-2.5-flash-lite` | $0.10 | $0.40 | $0.01 |
+| `gemini-2.0-flash` | $0.10 | $0.40 | $0.01 |
+| `gemini-1.5-flash` | $0.075 | $0.30 | $0.009 |
+
+Pricing is defined in `UsageService.PRICING` inside `core/services.py`. Update that dict if Google adjusts rates or you add a new model to your extraction pipeline.

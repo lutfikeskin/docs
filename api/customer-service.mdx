@@ -1,0 +1,155 @@
+---
+title: "Customer Search and Management API Reference"
+sidebarTitle: "CustomerService"
+description: "API reference for searching, counting, and managing customer profiles via PolicyService methods."
+---
+
+Customer operations are exposed through `PolicyService`. You do not need a separate service class — customer search, counting, and lifecycle management are all available on the same service instance you use for policies. Customers are created automatically when policies are saved and linked by name matching; in most cases, you interact with customer records through policy queries rather than managing them directly.
+
+Instantiate `PolicyService` as usual:
+
+```python services/customer_setup.py
+from core.database import get_session, init_db
+from core.services import PolicyService
+
+engine = init_db()
+session = get_session(engine)
+service = PolicyService(session)
+```
+
+---
+
+### `search_customers(term, orphan_filter, limit, offset)`
+
+Returns customer profiles matching the search term and orphan filter. The search covers both the customer's primary `full_name` and all associated name variants (business entities, aliases) stored in `CustomerEntity`.
+
+<ParamField path="term" type="str">
+  Search query string. Matched against `Customer.full_name` and any associated `CustomerEntity.entity_name` values using a SQL `LIKE` filter. Pass `None` or an empty string to list all customers within the filter.
+</ParamField>
+
+<ParamField path="orphan_filter" type="str" default="active">
+  Controls which customer population is included. Accepted values:
+
+  - `"active"` — only customers who have at least one linked policy. This is the default and the most common view.
+  - `"all"` — all customer records regardless of whether they have policies.
+  - `"orphans"` — only customers who have no linked policies. Use this to find stale profiles for cleanup.
+</ParamField>
+
+<ParamField path="limit" type="int" default="25">
+  Maximum number of results to return per page.
+</ParamField>
+
+<ParamField path="offset" type="int" default="0">
+  Number of records to skip before returning results. Use with `limit` for pagination.
+</ParamField>
+
+**Returns:** `list[Customer]` — Customer ORM objects sorted by `full_name` ascending.
+
+```python
+# Find active customers matching a name
+customers = service.search_customers("Rodriguez", orphan_filter="active", limit=25, offset=0)
+for customer in customers:
+    print(customer.full_name, customer.primary_email)
+
+# List all orphaned customer profiles
+orphans = service.search_customers(None, orphan_filter="orphans", limit=100, offset=0)
+print(f"Found {len(orphans)} orphaned customer profiles")
+```
+
+---
+
+### `count_customers(term, orphan_filter)`
+
+Returns the total count of customers matching the same filters as `search_customers`, without loading the records. Use this to calculate pagination totals or monitor population sizes.
+
+<ParamField path="term" type="str">
+  Search query string. Uses the same `LIKE` filter logic as `search_customers`.
+</ParamField>
+
+<ParamField path="orphan_filter" type="str" default="active">
+  Accepted values: `"active"`, `"all"`, `"orphans"`. Same semantics as `search_customers`.
+</ParamField>
+
+**Returns:** `int` — number of matching customers.
+
+```python
+total_active = service.count_customers(None, orphan_filter="active")
+total_orphans = service.count_customers(None, orphan_filter="orphans")
+
+print(f"Active customers: {total_active}")
+print(f"Orphaned profiles: {total_orphans}")
+```
+
+---
+
+## Customer Object Fields
+
+When a `Customer` object is returned from a search, the following fields are available:
+
+<ResponseField name="id" type="int">
+  Database primary key.
+</ResponseField>
+
+<ResponseField name="full_name" type="str">
+  The canonical display name for the customer. For personal policies, this is the insured's name. For commercial policies, this is the owner/principal name when known, or the business entity name when no individual owner has been identified.
+</ResponseField>
+
+<ResponseField name="primary_email" type="str | None">
+  Primary contact email address. Only present if manually entered.
+</ResponseField>
+
+<ResponseField name="primary_phone" type="str | None">
+  Primary contact phone number. Only present if manually entered.
+</ResponseField>
+
+<ResponseField name="needs_real_name_entry" type="bool">
+  `True` for commercial customers where the system could not automatically extract a human owner name from the insured name. These profiles are flagged for manual review so staff can add the individual's name.
+</ResponseField>
+
+<ResponseField name="created_at" type="datetime">
+  UTC timestamp when the customer profile was first created.
+</ResponseField>
+
+<ResponseField name="customer_entities" type="list[CustomerEntity]">
+  A list of name variant records associated with this customer. Each `CustomerEntity` has an `entity_name` (the name string), `entity_type` (`"personal"` or `"business"`), `is_primary` (bool), and `source` (`"extraction"` or `"manual"`). This collection is what enables the system to recognise the same customer across policies with slightly different insured name formats.
+</ResponseField>
+
+```python
+customer = service.search_customers("Acme Trucking", orphan_filter="all", limit=1)[0]
+
+print(customer.full_name)           # "John Smith"
+print(customer.needs_real_name_entry)  # True if owner name is unknown
+
+for entity in customer.customer_entities:
+    print(f"  {entity.entity_name} ({entity.entity_type}, source={entity.source})")
+```
+
+---
+
+## Customer Lifecycle
+
+### Automatic Creation on Policy Save
+
+When you call `save_policy_from_extraction()`, the `CustomerResolver` component automatically handles customer creation and linking:
+
+1. It searches for an existing customer whose `full_name` or `CustomerEntity.entity_name` closely matches the extracted `insured_name`.
+2. If a high-confidence match is found, the new policy is linked to the existing customer and the insured name is added as a name variant if it is not already present.
+3. If no match is found, a new `Customer` record is created using the insured name, and the policy is linked to it.
+
+For personal auto policies, the insured name is used directly as the `full_name`. For commercial policies, the resolver attempts to extract an embedded owner name (e.g. `"John Smith d/b/a Acme Trucking LLC"`) and sets `needs_real_name_entry = True` when no owner name can be inferred.
+
+### Retention Rules
+
+A customer profile is retained under any of the following conditions:
+
+- The customer has at least one linked policy remaining after a deletion.
+- The customer has a `primary_email` or `primary_phone` on record.
+- Any of the customer's `CustomerEntity` records has `source = "manual"`, indicating a human entered that name alias.
+
+### Orphan Cleanup on Policy Deletion
+
+When you call `delete_policy()`, the service checks whether the deleted policy was the customer's last. If the customer has no remaining policies **and** no manually entered data (no contact fields, no manual aliases), the orphaned customer profile is automatically deleted as part of the same transaction. Use `search_customers(orphan_filter="orphans")` to audit any profiles that were retained despite having no policies.
+
+<Info>
+Customer creation and linking happens automatically via `CustomerResolver` whenever you save a policy through `save_policy_from_extraction()`. You do not need to create or link customers manually for the standard extraction workflow.
+</Info>

@@ -1,0 +1,95 @@
+---
+title: "Upload and Save Your First Insurance Policy"
+sidebarTitle: "First Policy"
+description: "A complete walkthrough of uploading a policy PDF, reviewing extracted data, handling duplicates, and saving your first policy record."
+---
+
+This guide walks you through the complete process of uploading an insurance policy PDF, reviewing what the AI extracted, resolving any duplicates, and saving your first policy record to the database. If you're new to Insurance Doc Intelligence, start here — it covers everything from the initial file upload to confirming a saved record.
+
+<Steps>
+
+  ### Open Process Policies in the sidebar
+
+  Click **Process Policies** in the left sidebar. This is the main intake page where you upload documents and review extraction results before committing anything to your database. The page is blank until you upload a file, so nothing is at risk until you explicitly click Save.
+
+  ### Upload your PDF
+
+  Drag and drop your declarations page onto the upload area, or click the uploader to browse for a file. Insurance Doc Intelligence supports the following policy types:
+
+  - Personal auto
+  - Commercial auto
+  - General liability (GL)
+  - Business owners policy (BOP)
+  - Commercial package
+  - Umbrella
+  - Motor truck cargo
+
+  For the best extraction results, upload the **declarations page** of the policy — not a summary, binder, or endorsement page. The declarations page contains the structured fields (insured name, policy number, carrier, dates, limits) that the extraction pipeline is designed to read.
+
+  ### Wait for extraction
+
+  After you upload the file, a spinner appears while the Gemini AI model processes the document. Most declarations pages are processed in a few seconds. Large, multi-page PDFs may take **10–30 seconds**. Do not navigate away from the page during extraction, as this will interrupt the process.
+
+  ### Review extracted fields
+
+  Once extraction completes, the review panel displays the fields pulled from your document. Check each of the following carefully:
+
+  - **Insured name** — confirm the spelling matches your records
+  - **Policy number** — verify the format and all characters
+  - **Carrier** — confirm the insurance company name
+  - **Effective date and expiration date** — check the policy period
+  - **Premium** — verify the total premium amount
+
+  Fields marked with a **red badge** were extracted with low confidence. These are values the AI was less certain about, and you should verify them directly against the physical document before saving. You can click into any field and edit it inline before proceeding.
+
+  ### Review vehicles, drivers, and coverages
+
+  Expand the **Vehicles**, **Drivers**, and **Coverages** sections below the main fields. Each section displays the data extracted from those parts of the declarations page in an editable data table.
+
+  - Check each vehicle row for year, make, model, and VIN
+  - Review drivers for correct names and license numbers; verify any drivers flagged as excluded
+  - Scan coverage rows for the correct coverage types and limit amounts
+
+  If a row is wrong, click the cell to edit it inline. You can also add or delete rows using the controls at the end of each table. Any edits you make here are reflected in the saved record.
+
+  ### Check duplicate status
+
+  Before you save, a **duplicate detection banner** appears showing one of three statuses:
+
+  - **New policy** — no existing record matches this policy number; you are creating a fresh entry
+  - **Possible update** — a related policy exists (same insured, nearby dates) but the policy number differs; you may be saving a renewal or a mid-term change
+  - **Exact match / conflict** — a policy with this exact policy number already exists in your database
+
+  For exact matches, a **diff preview** opens automatically. It shows a side-by-side comparison of every field that will change if you choose to update the existing record, so you can confirm the changes before committing.
+
+  ### Choose update or new record
+
+  When the system detects an exact policy number match, you have two options:
+
+  - **Update existing record** — overwrites the existing policy with the new extraction data; all changes are logged in the history for that policy
+  - **Create new entry** — saves the incoming data as a separate record with the same policy number; use this only if the two records are genuinely distinct (for example, a rewrite with a reused number)
+
+  If there is no match, this step is skipped and the system proceeds directly to save.
+
+  ### Click Save
+
+  Click the **Save** button at the bottom of the review panel. A green success banner confirms the record was written to your database. The policy now appears in your **Database** page and is available across all other features in the workspace.
+
+</Steps>
+
+## After Saving
+
+Once a policy is saved, you can work with it across the rest of the application:
+
+- **Database** — find and search for the policy, view its full detail record, or edit any fields
+- **Create COI** — generate a Certificate of Insurance for the saved policy and any certificate holder
+- **Renewals** — if the policy has an expiration date, it will appear in the Renewals page as it approaches its expiry window
+- **Compare Policies** — if you later upload a renewal, you can compare the old and new policies side by side
+
+<Note>
+  Uploading the same PDF a second time returns the same extraction result from the local cache — no additional API call is made and no additional cost is incurred. If the document has been updated or you suspect the cached result is stale, use the **Force Refresh** toggle on the upload page to bypass the cache and re-extract from the current file.
+</Note>
+
+<Tip>
+  For a full reference of every field and option on the Process Policies page — including bulk upload, policy type overrides, and confidence gate settings — see the [Process Policies feature reference](/features/process-policies).
+</Tip>

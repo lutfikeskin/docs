@@ -1,0 +1,80 @@
+---
+title: "Manage Customers and Policy Assignments"
+sidebarTitle: "Managing Customers"
+description: "Understand how customer profiles are created, linked to policies, and cleaned up in Insurance Doc Intelligence."
+---
+
+Customer profiles are created automatically when you save a policy. Each profile links an insured's identity across multiple policies, so a single client — whether an individual, a family, or a business — has one consolidated record regardless of how many policies they carry. You do not need to create customer records manually; the system builds and maintains them as you work through your policy intake process.
+
+## How Customers Are Created
+
+When you save a policy, the system reads the insured name from the extraction result and attempts to match it to an existing customer profile. This matching uses **name normalization and variant matching**, which means it accounts for:
+
+- Business name variations (e.g., "Smith Trucking LLC" vs. "Smith Trucking")
+- DBA names — a business operating under a trade name separate from its legal entity name
+- Maiden names and personal name variants for individual insureds
+
+If a confident match is found, the new policy is linked to that existing customer. If no match is found, a new customer profile is created automatically and the policy is assigned to it. The full name stored on the customer record is taken from the primary insured name on the first policy saved for that customer.
+
+## Customer Portfolio View
+
+To see all your customers, open the **Database** page in the sidebar and switch to the **Customers** tab. The tab displays a paginated list of customer profiles along with a count of the policies attached to each one.
+
+You can filter the customer list using the display mode selector:
+
+| Filter | What it shows |
+|--------|--------------|
+| **Active** | Customers who have at least one policy saved in the database (default view) |
+| **All** | Every customer profile, including those with no policies currently attached |
+| **Orphans** | Customers who have no policies attached |
+
+Use the search bar to find a specific customer by their personal name, business name, or any known alias. The search matches against all name variants stored on the profile, not just the primary full name.
+
+## Orphan Profiles
+
+An **orphan customer** is a customer profile with no policies attached. Orphan profiles can appear in two situations:
+
+1. **Extraction-only orphans** — the profile was created automatically by the extraction pipeline when a policy was saved, but that policy has since been deleted. These profiles contain no manually entered data.
+2. **Retained orphans** — the profile once had policies but has been manually enriched with aliases, email addresses, or phone numbers.
+
+The system applies different cleanup rules to each type:
+
+- If you delete the **last policy** for an extraction-only orphan (no manual data, no contact info), the customer profile is **automatically removed** at the time of deletion. You do not need to clean these up yourself.
+- If the customer profile has **manually entered aliases, a primary email, or a phone number**, the profile is **retained** even after all its policies are deleted. Your manually entered data is never discarded automatically.
+
+## Editing Customer Data
+
+Click any customer row in the Customers tab to expand the detail panel. From there you can add or update the following:
+
+- **Aliases** — add business name variants, DBA names, or maiden names so future policy extractions match to this profile correctly
+- **Email address** — the primary contact email; used to pre-fill the "To" field when drafting renewal reminder emails
+- **Phone number** — the primary contact phone number for your records
+
+All changes you make in the customer detail panel are saved immediately. Unlike extraction-created data, manually entered aliases and contact details are preserved regardless of what happens to the policies linked to the customer.
+
+## Policy-Customer Relationships
+
+Each policy belongs to exactly one customer. Normally the assignment is handled automatically during the save flow. If the automatic matching linked a policy to the wrong customer — for example, because two insureds share a similar name — you can reassign it:
+
+1. Find the policy in the **Database** page (Policies tab)
+2. Open the policy edit dialog by clicking the policy row
+3. Use the **Reassign customer** option to search for the correct customer and confirm the change
+
+After reassignment, the policy moves to the selected customer profile. If the original customer profile had no other policies and no manual data, it is cleaned up automatically.
+
+## Deleting Policies and Customer Cleanup
+
+When you delete a policy, the system checks whether the associated customer should also be removed. The behavior depends on whether the customer has manual data:
+
+- **Extraction-only customer, last policy deleted** → the customer profile is deleted along with the policy
+- **Customer with manual aliases or contact data, last policy deleted** → the customer profile is **retained**; it appears in the Orphans filter view until a new policy is linked to it
+
+This means you can safely delete policies for testing or data correction without permanently losing customer profiles that contain real contact information.
+
+<Info>
+  The **Show orphans** filter in the Customers tab is hidden by default to keep your working view uncluttered. Enable it when you are auditing your database for stale or unmatched profiles — for example, after a bulk import or at the end of a policy term cycle.
+</Info>
+
+<Tip>
+  Add a `primary_email` to every customer profile as soon as you create or onboard a client. The renewal reminder drafting feature pre-fills the **To** field using this address. Without it, the To field will be blank and you will need to enter the address manually each time you draft a renewal email.
+</Tip>

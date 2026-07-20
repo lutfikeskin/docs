@@ -1,0 +1,298 @@
+---
+title: "COIService and COIGenerator API Reference"
+sidebarTitle: "COI Service"
+description: "API reference for COIService and COIGenerator — prepare COI payloads and generate ACORD 25 Certificate of Insurance PDFs programmatically."
+---
+
+COI generation is split between two components: **COIService** handles payload preparation from an ORM `Policy` object, while **COIGenerator** takes care of filling the ACORD 25 PDF template and returning a ready-to-deliver file. You can use them together through the standard workflow, or call `COIGenerator` directly with your own payload dict when you don't need the ORM helpers.
+
+---
+
+## COIService
+
+`COIService` is a static helper that converts a `Policy` ORM object into the `policy_data` dict expected by `COIGenerator`. It automatically resolves NAIC numbers, formats insured address fields, builds vehicle and driver description lines, and annotates compliance data (MCS-90, USDOT, DOC endorsements, BAP symbols) into the operations description.
+
+```python
+from core.database import get_session, init_db
+from core.services import COIService
+
+engine = init_db()
+session = get_session(engine)
+coi_service = COIService(session)
+```
+
+### `COIService.prepare_coi_data(policy)`
+
+Builds the `policy_data` dict and a list of description lines from a `Policy` ORM object. This is a `@staticmethod` — you can call it without an instance.
+
+<ParamField path="policy" type="Policy" required>
+  A `Policy` ORM object retrieved from the database. Must have at least
+  `carrier_name`, `policy_number`, `effective_date`, `expiration_date`,
+  `insured_name`, and `liability_limit` populated for a complete COI.
+  Optional but enriching fields include `underwriter_name`, `naic_number`,
+  `cargo_limit`, `cargo_deductible`, `insured_address`, and related
+  `vehicles`, `drivers`, and compliance annotations.
+</ParamField>
+
+**Returns:** A tuple `(policy_data, desc_lines)` where:
+
+<ResponseField name="policy_data" type="dict">
+  A flat dict of policy fields keyed to match `COIGenerator`'s expected
+  input. Includes `carrier_name`, `underwriter_name`, `naic_number`,
+  `policy_number`, `effective_date`, `expiration_date`, `liability_limit`,
+  `cargo_limit`, `cargo_deductible`, `has_general_liability`,
+  `has_auto_liability`, `insured_name`, `insured_address`, `insured_city`,
+  `insured_state_code`, `insured_zip`, `vehicle_list_str`, and
+  `driver_list_str`.
+</ResponseField>
+
+<ResponseField name="desc_lines" type="list[str]">
+  Ordered lines assembled for the ACORD 25 "Description of Operations" field.
+  Includes vehicle lists, driver lists, MCS-90 references, USDOT/MC numbers,
+  Drive Other Car endorsement details, BAP covered-auto symbols, and UM
+  stacked limit notes where present on the policy.
+</ResponseField>
+
+**Example — using `prepare_coi_data` with the COIGenerator:**
+
+```python title="generate_from_policy.py"
+from core.database import get_session, init_db
+from core.services import COIService
+from modules.coi.generator import COIGenerator
+
+engine = init_db()
+session = get_session(engine)
+
+# Fetch a policy from the database
+from core.database import Policy
+policy = session.query(Policy).filter_by(policy_number="ABC-123456").first()
+
+# Build the payload
+policy_data, desc_lines = COIService.prepare_coi_data(policy)
+
+# Provide certificate holder details
+holder_data = {
+    "name": "XYZ Logistics Corp",
+    "address": "123 Main St",
+    "city": "Columbus",
+    "state": "OH",
+    "zip": "43215",
+    "description": "\n".join(desc_lines),
+}
+
+# Generate the PDF
+generator = COIGenerator()
+pdf_bytes = generator.generate_coi(policy_data, holder_data)
+
+with open("coi_output.pdf", "wb") as f:
+    f.write(pdf_bytes.getvalue() if hasattr(pdf_bytes, "getvalue") else pdf_bytes)
+```
+
+<Note>
+  `prepare_coi_data` does **not** accept a `holder_data` argument — certificate
+  holder fields (name, address, city, state, zip, and description) are
+  assembled separately and passed directly to `COIGenerator.generate_coi`.
+  This separation lets you generate the same policy COI for multiple holders
+  without re-fetching or re-processing the policy payload.
+</Note>
+
+---
+
+## COIGenerator
+
+`COIGenerator` loads an ACORD 25 PDF template, maps your `policy_data` and `holder_data` dicts to the form's named fields via a `mapping.json` sidecar file, and writes the filled document to an in-memory buffer. PyMuPDF (`fitz`) is used for field flattening when available.
+
+```python
+from modules.coi.generator import COIGenerator
+
+generator = COIGenerator(template_path="data/COI Example.pdf")
+```
+
+<ParamField path="template_path" type="str" default='"data/COI Example.pdf"'>
+  Path to the ACORD 25 fillable PDF template, relative to the project root.
+  The default template ships with the project at `data/COI Example.pdf`.
+  Pass a custom path to use an alternate template — the `mapping.json` file
+  in `modules/coi/` must match the field names in whatever template you supply.
+</ParamField>
+
+### `COIGenerator.generate_coi(policy_data, holder_data, desc_font_size=8)`
+
+Fills the ACORD 25 template with policy and certificate holder data and returns the completed PDF as bytes.
+
+<ParamField path="policy_data" type="dict" required>
+  Policy fields used to populate the insurer, insured, coverage, and limits
+  sections of the ACORD form. Recognised keys:
+
+  | Key | Type | Description |
+  |-----|------|-------------|
+  | `carrier_name` | `str` | Brand/trade name of the insurer. Used as the ACORD insurer name when `underwriter_name` is absent. |
+  | `underwriter_name` | `str` | Legal entity name of the insurer. Takes precedence over `carrier_name` on the ACORD form when set. |
+  | `naic_number` | `str` | NAIC code printed in the insurer identification block. |
+  | `insured_name` | `str` | Full legal name of the named insured. |
+  | `insured_address` | `str` | Street address of the named insured. |
+  | `insured_city` | `str` | City of the named insured. |
+  | `insured_state_code` | `str` | Two-letter state code. |
+  | `insured_zip` | `str` | ZIP code of the named insured. |
+  | `policy_number` | `str` | Policy number — applied to every enabled coverage section. |
+  | `effective_date` | `str` or `date` | Policy effective date. Pass a `datetime`/`date` object or an ISO 8601 string; the generator formats it as MM/DD/YYYY. |
+  | `expiration_date` | `str` or `date` | Policy expiration date — same format rules as `effective_date`. |
+  | `has_general_liability` | `bool` | Enables the General Liability section. |
+  | `has_auto_liability` | `bool` | Enables the Automobile Liability section. |
+  | `liability_limit` | `str` | Combined single limit or per-occurrence limit (e.g. `"$1,000,000"`). Used for both GL occurrence and auto CSL fields. |
+  | `gl_general_aggregate` | `str` | Override for the GL general aggregate. Falls back to `liability_limit` when absent. |
+  | `has_cargo` | `bool` | Enables the Motor Truck Cargo section. Auto-detected from `cargo_limit` when not explicitly set. |
+  | `cargo_limit` | `str` | Cargo coverage limit (e.g. `"$100,000"`). |
+  | `cargo_deductible` | `str` | Cargo deductible amount. |
+  | `coi_type` | `str` | Controls the ADDL INSD column. One of `"Additional Insured"` (default), `"Certificate Holder"`, or `"Lienholder"`. |
+  | `comp_deductible` | `str` | Comprehensive deductible — used when `coi_type` is `"Lienholder"`. |
+  | `coll_deductible` | `str` | Collision deductible — used when `coi_type` is `"Lienholder"`. |
+  | `vehicle_list_str` | `str` | Pre-formatted vehicle list string appended to the operations description. |
+  | `driver_list_str` | `str` | Pre-formatted driver list string appended to the operations description. |
+  | `description_of_operations` | `str` | Direct override for the operations description field; combined with vehicle/driver lists when provided. |
+</ParamField>
+
+<ParamField path="holder_data" type="dict" required>
+  Certificate holder details for the bottom-left block of the ACORD form.
+
+  | Key | Type | Description |
+  |-----|------|-------------|
+  | `name` | `str` | Certificate holder company or individual name. |
+  | `address` | `str` | Street address. |
+  | `city` | `str` | City. |
+  | `state` | `str` | Two-letter state code. |
+  | `zip` | `str` | ZIP code. |
+  | `description` | `str` | Additional text for the operations description block (e.g. holder clause, radius, pre-formatted `desc_lines` from `COIService`). |
+</ParamField>
+
+<ParamField path="desc_font_size" type="int" default="8">
+  Font size (in points) applied to the "Description of Operations / Locations / Vehicles" field when PyMuPDF is available for flattening. Reduce this value if your description text overflows the field at the default size.
+</ParamField>
+
+**Returns:** A `bytes` object (or `BytesIO`-like) containing the completed PDF. Write directly to disk or serve via HTTP.
+
+**Full example:**
+
+```python title="direct_generate.py"
+from modules.coi.generator import COIGenerator
+
+generator = COIGenerator()
+
+policy_data = {
+    "insured_name": "ABC Trucking LLC",
+    "carrier_name": "Progressive",
+    "underwriter_name": "Progressive Casualty Insurance Company",
+    "policy_number": "ABC-123456",
+    "effective_date": "2024-01-01",
+    "expiration_date": "2025-01-01",
+    "has_general_liability": False,
+    "has_auto_liability": True,
+    "liability_limit": "$1,000,000",
+    "has_cargo": True,
+    "cargo_limit": "$100,000",
+    "cargo_deductible": "$1,000",
+    "description_of_operations": "Trucking operations - all owned vehicles",
+}
+
+holder_data = {
+    "name": "XYZ Logistics Corp",
+    "address": "123 Main St",
+    "city": "Columbus",
+    "state": "OH",
+    "zip": "43215",
+}
+
+pdf_bytes = generator.generate_coi(policy_data, holder_data)
+
+# Save to file
+with open("coi_output.pdf", "wb") as f:
+    f.write(pdf_bytes.getvalue() if hasattr(pdf_bytes, "getvalue") else pdf_bytes)
+```
+
+---
+
+## Insurer Name Resolution
+
+The generator writes two values to the ACORD insurer name field, using the following priority:
+
+1. **`underwriter_name`** — the legal entity name of the insurer (e.g. `"Progressive Casualty Insurance Company"`). This is the value printed on the form when set.
+2. **`carrier_name`** — the brand name (e.g. `"Progressive"`). Used as a fallback when `underwriter_name` is `None` or an empty string.
+
+The UI always displays `carrier_name` as the user-facing label, but the ACORD form uses the legal entity name to remain compliant with certificate requirements. `COIService.prepare_coi_data` populates both keys automatically from the ORM policy.
+
+---
+
+## Coverage Sections
+
+Only sections explicitly enabled in `policy_data` are filled on the form. Three boolean flags control which sections appear:
+
+| Flag | Section filled |
+|------|----------------|
+| `has_general_liability: True` | General Liability (occurrence, aggregate, fire damage, med exp, personal & adv injury, products-completed ops) |
+| `has_auto_liability: True` | Automobile Liability (combined single limit) |
+| `has_cargo: True` (with `cargo_limit` set) | Other Policies — Motor Truck Cargo (limit and deductible) |
+
+When `coi_type` is `"Lienholder"`, the Cargo section is suppressed and the Other Policies block is repurposed to show Comprehensive / Collision deductibles (`comp_deductible`, `coll_deductible`) instead.
+
+<Info>
+  `has_cargo` is **auto-detected** from the presence of `cargo_limit` when the
+  key is absent from `policy_data`. Pass `has_cargo: False` explicitly to
+  suppress the Cargo section even when a `cargo_limit` value exists.
+</Info>
+
+---
+
+## PDF Flattening
+
+After filling form fields, `generate_coi` attempts to flatten the PDF using PyMuPDF (`fitz`). Flattening converts interactive form fields into static page content, producing a non-editable output that renders consistently across all PDF viewers.
+
+| Scenario | Result |
+|----------|--------|
+| `pymupdf` installed | Fields are baked into the page; `desc_font_size` is applied before flattening |
+| `pymupdf` not installed | Editable form fields are retained; `desc_font_size` is ignored |
+| Flattening raises an exception | Falls back to unflattened PDF; a warning is logged |
+
+The fallback behaviour means `generate_coi` always returns a usable PDF — a working editable document is preferred over an error.
+
+<Note>
+  The template path defaults to `data/COI Example.pdf` relative to the project
+  root. Pass a custom `template_path` to `COIGenerator.__init__` if you need to
+  use a different ACORD template. The `modules/coi/mapping.json` field map must
+  match the internal field names of whichever template you supply.
+</Note>
+
+---
+
+## Bulk Generation
+
+For generating one COI per certificate holder, call `generate_coi` in a loop and collect the resulting bytes. The standard naming convention used by the application is:
+
+```
+COI - {insured_name} - {holder_name}.pdf
+```
+
+You can package multiple outputs into a ZIP archive using Python's `zipfile` module:
+
+```python title="bulk_generate.py"
+import zipfile
+import io
+from modules.coi.generator import COIGenerator
+from core.services import COIService
+
+generator = COIGenerator()
+policy_data, desc_lines = COIService.prepare_coi_data(policy)
+
+holders = [
+    {"name": "Holder A", "address": "1 Oak St", "city": "Columbus", "state": "OH", "zip": "43215"},
+    {"name": "Holder B", "address": "2 Elm St", "city": "Chicago",  "state": "IL", "zip": "60601"},
+]
+
+zip_buffer = io.BytesIO()
+with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+    for holder in holders:
+        holder["description"] = "\n".join(desc_lines)
+        pdf = generator.generate_coi(policy_data, holder)
+        filename = f"COI - {policy_data['insured_name']} - {holder['name']}.pdf"
+        zf.writestr(filename, pdf.getvalue() if hasattr(pdf, "getvalue") else pdf)
+
+zip_bytes = zip_buffer.getvalue()
+```

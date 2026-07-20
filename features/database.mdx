@@ -1,0 +1,115 @@
+---
+title: "Search and Manage Your Policy Database"
+sidebarTitle: "Database"
+description: "Browse, search, edit, and export your complete policy portfolio and customer records from the Database page."
+---
+
+The Database page is your central policy registry — the single source of truth for every record you've extracted or entered manually. Every policy saved from the [Process Policies](/features/process-policies) page lands here. From the Database you can search across the full book, drill into individual records, correct any field, view endorsement history, export reports, and ask plain-English questions about your data.
+
+The page is divided into two tabs: **Policies** and **Customers**.
+
+## Searching Policies
+
+The search bar at the top of the Policies tab performs a full-text, server-side search across policy numbers, insured names, carrier names, and other indexed fields. Results are ranked by recency — the newest records appear first.
+
+- **Leave the search box empty** to see the most recent policies (up to 100 at a time).
+- **Type any partial string** to narrow results. For example, typing `Progressive` shows all Progressive policies, while typing `ABC-` shows all policies whose number starts with `ABC-`.
+- When your search matches more records than the display limit, a caption tells you how many total matches exist and invites you to refine the query.
+
+The results grid is sortable and filterable by any column. Use the **⚙️ Columns** popover to show or hide fields — by default the grid shows Status, Policy #, Carrier, Insured, Effective, Premium, Auto Liability, Cargo, Vehicles, Drivers, and Eligibility.
+
+## Policy Detail and Edit
+
+Click the checkbox on any row in the grid to select that policy. The action panel below the grid activates with two options:
+
+<Steps>
+  <Step title="Edit the policy">
+    Click **✏️ Edit Policy #[number]** to open the edit dialog. Every policy field is editable — carrier, insured, dates, limits, vehicles, drivers, coverages, and additional interests. All changes are recorded in the policy's change history so you have a full audit trail of who changed what and when.
+  </Step>
+  <Step title="Open in Create COI">
+    Click **📄 Open in Create COI** to jump directly to the COI generator with this policy pre-loaded. Useful when a client requests a certificate immediately after you've confirmed their policy details.
+  </Step>
+</Steps>
+
+When a policy is selected, the panel also shows any **Endorsements** linked to that policy — type, effective date, form number, parent policy number, and a changes summary. If no endorsements have been extracted yet, a note tells you so.
+
+## Customer Portfolio
+
+Switch to the **Customers** tab to browse your customer book. The tab shows one row per customer with their active policy count, total policy count, policy types, most recent effective date, and when the customer profile was created.
+
+### Filtering customers
+
+Use the **Customer filter** dropdown to narrow the list:
+
+| Filter | Shows |
+|---|---|
+| **Active customers** *(default)* | Customers who have at least one active policy |
+| **All customers** | Every customer profile, including those whose policies have all expired or been cancelled |
+| **Orphans only** | Customer profiles that have no remaining policies — useful for housekeeping after deletions |
+
+### Searching customers
+
+The search box above the table filters by name or any registered business name or DBA alias. Pagination controls let you page through large books 25 customers at a time.
+
+Click any row to expand that customer's detail card. Inside, you'll see all of their policies grouped by status (Active, Expired, Cancelled, Replaced), with policy number, type, carrier, and date range for each. You can also add a business name, DBA, or alias using the **➕ Add business name / DBA / alias** expander.
+
+## Deleting Policies
+
+Deleting a policy is a permanent action and requires confirmation. In the **🗑️ Danger Zone** expander (visible when the search box is empty), select one or more policies to delete, then type the corresponding policy numbers into the confirmation field. The delete button only activates when the typed numbers match the selection exactly.
+
+When a policy is deleted, the system automatically cleans up the associated customer profile if appropriate:
+
+<Info>
+  **Safe deletion rules:**
+  - If the deleted policy was the **last policy for an extraction-only customer** — meaning the customer was created automatically from a PDF and has no manually added aliases, contact data, or notes — the empty customer profile is also deleted.
+  - If the customer profile has **manual aliases or contact data**, it is retained even if all policies are removed. You'll see a message confirming how many profiles were removed vs. retained.
+</Info>
+
+## Export
+
+Two export options are available at the bottom of the Policies tab:
+
+<CardGroup cols={2}>
+  <Card title="📥 Export Current View" icon="file-excel">
+    Downloads an Excel (.xlsx) report of the policies currently visible in the grid — meaning the result of your active search query. Use this to share a filtered slice of the book with a colleague or for ad-hoc analysis in a spreadsheet.
+  </Card>
+  <Card title="💾 Backup Database" icon="database">
+    Downloads the full SQLite database file (`insurance_data.db`). This is a complete, portable backup of all your policies, customers, vehicles, drivers, coverages, and history records. Store it somewhere safe on a regular basis.
+  </Card>
+</CardGroup>
+
+## Natural Language Query
+
+The **💬 Chat with your Data (AI Search)** expander, powered by Gemini, lets you ask plain-English questions about your policy portfolio. The system converts your question into a SQL query, runs it against the live database, and displays the results in an interactive table.
+
+<Steps>
+  <Step title="Open the AI Search expander">
+    Click **💬 Chat with your Data (AI Search)** to expand the query panel. It appears above the main policy grid.
+  </Step>
+  <Step title="Type your question">
+    Enter a natural-language question in the text box. For example:
+
+    ```text
+    Show me all policies with a cargo limit below $100,000
+    ```
+
+    ```text
+    Which carriers have more than 10 policies in the database?
+    ```
+
+    ```text
+    List all policies expiring in the next 30 days with a premium above $5,000
+    ```
+  </Step>
+  <Step title="Review the results">
+    The AI returns a filterable, sortable results table. You can expand the **🛠️ View Generated SQL code** section to see the exact query that was run — useful for verifying the logic or adapting it for a manual export.
+  </Step>
+</Steps>
+
+<Warning>
+  Natural language query requires a valid Gemini API key configured in Settings. Queries consume API quota. For routine searches, use the standard search bar instead — it's instant and free.
+</Warning>
+
+<Tip>
+  Natural language query shines for ad-hoc analysis that would be awkward to set up in a filter. Try questions like **"show me all commercial auto policies expiring in Q1"** or **"which insured has the most vehicles on file"** to get answers without building a report.
+</Tip>

@@ -1,0 +1,67 @@
+---
+title: "Gemini API Key Setup for Extraction Features"
+sidebarTitle: "Authentication"
+description: "Configure your Google Gemini API key to enable AI extraction and natural language query features in Insurance Doc Intelligence."
+---
+
+AI-powered extraction and natural language query features require a Google Gemini API key. All other features — policy search, CRUD operations, customer management, COI generation, and dashboard metrics — work without one. You only need a key when you call `process_pdf()` or `PolicyService.ask_your_data()`.
+
+## Where to Get a Key
+
+Visit [https://aistudio.google.com](https://aistudio.google.com) to create a free Google AI Studio account and generate an API key. Free-tier keys are sufficient for development and low-volume use. Review Google's usage policies if you plan to process production data at scale.
+
+## Configuring the Key
+
+Insurance Doc Intelligence supports three configuration methods. Choose the one that matches your deployment scenario.
+
+### 1. Settings Dialog
+
+**Recommended for interactive use.**
+
+Click the **⚙️ Settings** icon in the sidebar, paste your API key into the field, and click **Save**. The key is stored in the browser session and takes effect immediately for the current tab.
+
+This approach is convenient for ad-hoc testing and manual document processing. Because the key lives in the browser session, it is lost when you close the tab or refresh the page.
+
+### 2. Environment Variable
+
+**Recommended for server deployments and scripted use.**
+
+Set the `GEMINI_API_KEY` environment variable before starting the application:
+
+```bash
+# bash / zsh / Linux / macOS
+export GEMINI_API_KEY="your-gemini-api-key-here"
+```
+
+```powershell
+# PowerShell (Windows)
+$env:GEMINI_API_KEY = "your-gemini-api-key-here"
+```
+
+The application reads this variable on startup and makes it available to the extraction pipeline. When you call `process_pdf()` directly from a script, pass the key explicitly as the `api_key` parameter — the environment variable is not automatically injected into programmatic calls.
+
+### 3. Streamlit Secrets
+
+**Recommended for cloud and containerised deployments.**
+
+Create a `.streamlit/secrets.toml` file at the root of your project with the following content. The application reads this file automatically on startup:
+
+```toml .streamlit/secrets.toml
+GEMINI_API_KEY = "your-gemini-api-key-here"
+```
+
+Streamlit Secrets integrate cleanly with hosted platforms (Streamlit Community Cloud, Docker, Kubernetes) and keep credentials out of your shell history and process environment.
+
+## Key Status
+
+Once a key is active, the sidebar displays a green **✅ API Active** badge along with your daily usage metrics — total calls, token counts, and estimated spend for the current US Eastern day window. When no key is configured or the key is invalid, the sidebar shows an orange **⚠️ API Missing** badge. Extraction and natural language query features are disabled until a valid key is provided.
+
+## Session Scope
+
+Keys entered through the Settings dialog are **session-scoped**. They persist only for the lifetime of the current browser tab. If you refresh the page or open a new tab, you will need to re-enter the key through Settings.
+
+For persistent operation across restarts, use the environment variable or `.streamlit/secrets.toml` methods described above.
+
+<Warning>
+Never commit your API key to source control or include it in log output. Treat your Gemini API key as a secret credential with the same care as a database password. If a key is accidentally exposed, rotate it immediately in Google AI Studio.
+</Warning>

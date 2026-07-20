@@ -1,0 +1,72 @@
+---
+title: "Configure Insurance Doc Intelligence Settings"
+sidebarTitle: "Configuration"
+description: "Set your Gemini API key, extraction quality gate, and daily usage budget to customize how Insurance Doc Intelligence behaves for your team."
+---
+
+Insurance Doc Intelligence exposes its most commonly changed settings through the **⚙️ Settings** dialog in the sidebar — no file editing required for day-to-day use. For automated or containerized deployments you can also supply values through environment variables, which the app reads at startup before falling back to the dialog. The sections below cover every configurable area in the order you are most likely to encounter them.
+
+## Gemini API Key
+
+The Gemini API key authenticates calls to Google's generative AI service, which powers PDF extraction and natural-language database queries.
+
+**How to set it:**
+
+- **Settings dialog** — Click **⚙️ Settings** at the bottom of the sidebar, paste your key into the **Gemini API Key** field, and click **Save**. The sidebar status indicator changes from ⚠️ API Missing to ✅ API Active.
+- **Environment variable** — Set `GEMINI_API_KEY` in your shell or container environment before starting the app. The app reads it automatically at launch.
+- **Streamlit secrets** — Add `GEMINI_API_KEY = "your_key"` to `.streamlit/secrets.toml`. This is the recommended approach for shared or server deployments where you do not control the shell environment.
+
+The app checks these sources in order: session state (dialog) → process environment → `st.secrets`. The first non-empty value wins.
+
+The API key is stored in your **browser session only** — it is never written to disk, the database, or any log file. Closing the tab or refreshing the browser clears it unless you have also set the environment variable or `st.secrets`.
+
+<Warning>
+  Never commit your Gemini API key to source control. If your key appears in a file tracked by Git, rotate it immediately in Google AI Studio and remove the file from your repository history.
+</Warning>
+
+## Extraction Quality Gate
+
+The quality gate controls how the application handles low-confidence extracted fields before showing them to you on the review form. Choose the level that matches your tolerance for pre-filled data.
+
+| Setting | Behavior |
+|---|---|
+| **Off** | Trust all extracted values — every field is pre-filled regardless of confidence. |
+| **Clear low-confidence fields** | Fields the engine marked as low-confidence are blanked out on the review form. This is the **default**. |
+| **Clear low + medium-confidence fields** | Both low- and medium-confidence fields are cleared — only high-confidence values remain pre-filled. |
+
+To change the gate, open **⚙️ Settings**, scroll to **Extraction Quality Gate**, select the option that fits your workflow, and click away — the change takes effect on the next extraction you run.
+
+**What "clearing a field" means in practice:** the field appears blank on the review form so you must type the correct value yourself rather than skim past a potentially wrong one. Saving the record is never blocked — the gate is a nudge toward accuracy, not a hard validation lock.
+
+<Tip>
+  Leave the default **Clear low-confidence fields** setting for most workflows. It catches the values the engine was genuinely unsure about while still pre-filling the majority of the form — saving you time without hiding risky guesses.
+</Tip>
+
+## Daily Usage Budget
+
+The daily budget tracks how much you spend on Gemini API calls within a single calendar day (Eastern Time) and warns you when you approach or reach the limit.
+
+- **Default limit:** `$2.50` per day, set by `DEFAULT_DAILY_BUDGET` in `core/constants.py`.
+- **Budget meter:** When an API key is active, the sidebar shows a live spend meter — current spend vs. the daily limit — along with call count and token statistics.
+- **Reset:** Open **⚙️ Settings**, scroll to **Usage Management**, and click **Reset Daily Usage Meter** to zero the counter immediately.
+
+<Info>
+  The budget is a **soft guard**. When your daily spend reaches the limit, the sidebar displays a "Daily limit reached" warning, but extraction is not blocked. You can continue making calls — the warning is a reminder to review your usage, not a hard stop.
+</Info>
+
+## Data Files
+
+The following files in the `data/` directory enrich the application's behavior. All three are optional — the app runs without them.
+
+### Certificate Holders
+
+- `data/coi_holders.json` — A JSON list of certificate holder records used to populate the holder dropdown on the Create COI screen.
+- `data/Additionalinsuredcomps.xlsx` — A spreadsheet of additional insured companies that supplements the holders list.
+
+Add your own holder records to either file to speed up COI creation: instead of typing holder details from scratch, you select a pre-loaded entry from the dropdown.
+
+### Carrier Hints
+
+- `data/carrier_hints.json` — A static JSON file that maps carrier names or identifiers to extraction hints. The pipeline reads these hints when it detects a matching carrier in the PDF, which improves field accuracy for carriers whose declarations pages have unusual formatting.
+
+You can extend this file with entries for carriers your brokerage works with frequently. Refer to the existing entries in the file for the expected key/value structure.

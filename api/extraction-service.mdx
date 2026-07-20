@@ -1,0 +1,296 @@
+---
+title: "PDF Extraction API Reference"
+sidebarTitle: "Extraction API"
+description: "Reference for process_pdf() — the top-level entry point to extract structured insurance data from a PDF using the Gemini extraction pipeline."
+---
+
+`process_pdf()` is the main extraction entry point for Insurance Doc Intelligence. It accepts raw PDF bytes, sends the document through the Gemini-powered extraction pipeline, and returns a structured dict containing all policy fields, coverages, vehicles, drivers, and classification metadata. The function is the bridge between a raw uploaded file and a structured record that `PolicyService.save_policy_from_extraction()` can persist to the database.
+
+---
+
+### `process_pdf(file_bytes, api_key, policy_type=None, force_refresh=False)`
+
+<ParamField path="file_bytes" type="bytes" required>
+  Raw PDF file content. Read the file in binary mode and pass the bytes directly — do not encode or convert.
+</ParamField>
+
+<ParamField path="api_key" type="str" required>
+  Your Google Gemini API key. See the [Authentication](/api/authentication) page for setup instructions. An empty or invalid key causes the function to return an error immediately.
+</ParamField>
+
+<ParamField path="policy_type" type="str" optional>
+  Override the automatic policy type classification. When provided, the pipeline skips the classifier call and uses this type directly. Must be one of the values from `core.constants.POLICY_TYPES`:
+
+  - `"personal_auto"`
+  - `"commercial_auto"`
+  - `"general_liability"`
+  - `"bop"`
+  - `"commercial_package"`
+  - `"umbrella"`
+  - `"motor_truck_cargo"`
+  - `"unknown"`
+
+  Pass `None` (the default) to let the pipeline auto-detect the policy type from the document content.
+</ParamField>
+
+<ParamField path="force_refresh" type="bool" default="false">
+  When `True`, bypass the extraction cache and re-extract the document from scratch even if a cached result exists for the same file bytes. Defaults to `False`.
+</ParamField>
+
+**Returns:** `tuple[dict | None, dict | None, str | None]` — `(extraction_result, metadata, error_message)`
+
+<ResponseField name="extraction_result" type="dict | None">
+  The structured extraction output. `None` on failure. See the [Extraction Result Shape](#extraction-result-shape) section below for the full key reference.
+</ResponseField>
+
+<ResponseField name="metadata" type="dict | None">
+  Pipeline execution metadata including token usage, cost, and cache source. `None` on failure. Contains a `source` key (`"cache"` or `"gemini"`) and a `cost` key (float, estimated USD).
+</ResponseField>
+
+<ResponseField name="error_message" type="str | None">
+  `None` on success. On failure, a human-readable description of what went wrong — suitable for display to end users after removing any internal technical detail.
+</ResponseField>
+
+```python extraction_example.py
+from modules.extraction import process_pdf
+from core.database import get_session, init_db
+from core.services import PolicyService
+
+# Read PDF bytes
+with open("policy.pdf", "rb") as f:
+    file_bytes = f.read()
+
+# Run extraction
+result, metadata, error = process_pdf(
+    file_bytes=file_bytes,
+    api_key="your-gemini-api-key",
+)
+
+if error:
+    print(f"Extraction failed: {error}")
+else:
+    print(result["policy"]["insured_name"])
+    print(result["policy"]["policy_number"])
+
+    for coverage in result["coverages"]:
+        print(coverage["type"], coverage["limits"])
+
+    # Persist to database
+    engine = init_db()
+    session = get_session(engine)
+    service = PolicyService(session)
+
+    success, message = service.save_policy_from_extraction(result)
+    print(message)
+```
+
+To extract with a forced policy type (bypasses auto-classification):
+
+```python forced_type_example.py
+result, metadata, error = process_pdf(
+    file_bytes=file_bytes,
+    api_key="your-gemini-api-key",
+    policy_type="commercial_auto",
+)
+```
+
+To force a fresh extraction, bypassing the cache:
+
+```python force_refresh_example.py
+result, metadata, error = process_pdf(
+    file_bytes=file_bytes,
+    api_key="your-gemini-api-key",
+    force_refresh=True,
+)
+
+if metadata:
+    print(f"Source: {metadata['source']}")  # "gemini" — cache was bypassed
+    print(f"Cost:   ${metadata['cost']:.6f}")
+```
+
+---
+
+## Extraction Result Shape
+
+When extraction succeeds, `extraction_result` is a dict with the following top-level keys:
+
+### `policy`
+
+A dict of scalar policy-level fields extracted from the declarations page:
+
+<ResponseField name="insured_name" type="str">
+  Full name of the insured party as it appears on the policy.
+</ResponseField>
+
+<ResponseField name="carrier_name" type="str">
+  Name of the insurance carrier.
+</ResponseField>
+
+<ResponseField name="underwriter_name" type="str">
+  Name of the underwriting company, if present and distinct from the carrier.
+</ResponseField>
+
+<ResponseField name="policy_number" type="str">
+  Policy number string as extracted. The database normalizes this for duplicate detection.
+</ResponseField>
+
+<ResponseField name="effective_date" type="str">
+  Policy effective date in `YYYY-MM-DD` format.
+</ResponseField>
+
+<ResponseField name="expiration_date" type="str">
+  Policy expiration date in `YYYY-MM-DD` format.
+</ResponseField>
+
+<ResponseField name="premium" type="str">
+  Total policy premium as a formatted string (e.g. `"$12,500.00"`).
+</ResponseField>
+
+<ResponseField name="policy_type" type="str">
+  Detected or user-specified policy type. One of the `POLICY_TYPES` constants.
+</ResponseField>
+
+<ResponseField name="state_code" type="str">
+  Two-letter state code for the primary insured location (e.g. `"TX"`, `"NY"`).
+</ResponseField>
+
+<ResponseField name="[field]_confidence" type="str">
+  Each extracted field has a companion `[field]_confidence` key with value `"high"`, `"medium"`, or `"low"`. For example, `carrier_name_confidence`, `policy_number_confidence`, `premium_confidence`. Low-confidence fields are flagged for review in the UI.
+</ResponseField>
+
+### `coverages`
+
+A list of coverage dicts, one per coverage line extracted from the policy:
+
+<ResponseField name="type" type="str">
+  Human-readable display name for the coverage (e.g. `"Auto Liability"`, `"Motor Truck Cargo"`).
+</ResponseField>
+
+<ResponseField name="coverage_code" type="str">
+  Canonical coverage code used internally (e.g. `"AUTO_LIAB_BI"`, `"GL_OCCURRENCE"`, `"MTC_CARGO"`).
+</ResponseField>
+
+<ResponseField name="limits" type="dict">
+  A dict of monetary limit values for the coverage. Keys include:
+
+  - `per_occurrence` — per-occurrence limit (int, dollars)
+  - `aggregate` — aggregate limit (int, dollars)
+  - `combined_single_limit` — combined single limit (int, dollars)
+  - `deductible` — deductible amount (int, dollars)
+
+  Not all keys are present for every coverage type; missing limits are `None` or absent.
+</ResponseField>
+
+<ResponseField name="vehicle_vin" type="str | None">
+  VIN of the vehicle this coverage applies to, if the coverage is vehicle-specific. `None` for fleet-level or non-vehicle coverages.
+</ResponseField>
+
+### `vehicles`
+
+A list of vehicle dicts extracted from the schedule of covered autos:
+
+<ResponseField name="vin" type="str">
+  17-character Vehicle Identification Number.
+</ResponseField>
+
+<ResponseField name="year" type="int">
+  Model year.
+</ResponseField>
+
+<ResponseField name="make" type="str">
+  Vehicle manufacturer (e.g. `"Freightliner"`, `"Ford"`).
+</ResponseField>
+
+<ResponseField name="model" type="str">
+  Vehicle model name.
+</ResponseField>
+
+<ResponseField name="vehicle_type" type="str">
+  Refined vehicle type classification (e.g. `"Tractor"`, `"Straight Truck"`, `"Cargo Van"`, `"Private Passenger"`).
+</ResponseField>
+
+### `drivers`
+
+A list of driver dicts extracted from the schedule of listed drivers:
+
+<ResponseField name="name" type="str">
+  Driver's full name.
+</ResponseField>
+
+<ResponseField name="license_number" type="str">
+  Driver's license number.
+</ResponseField>
+
+<ResponseField name="date_of_birth" type="str | None">
+  Date of birth in `YYYY-MM-DD` format, if present.
+</ResponseField>
+
+### `classification`
+
+A dict with the pipeline's document and policy type detection results:
+
+<ResponseField name="document_type" type="str">
+  The detected document type (e.g. `"declarations_page"`, `"certificate_of_insurance"`, `"endorsement"`).
+</ResponseField>
+
+<ResponseField name="policy_type" type="str">
+  The detected or user-specified policy type.
+</ResponseField>
+
+### `page_dimensions`
+
+A dict with page size metadata for the processed PDF. Used internally for layout-aware extraction and COI generation. Contains width and height values for the first page.
+
+---
+
+## Error Handling
+
+When extraction fails, `extraction_result` and `metadata` are both `None`, and `error_message` contains a user-friendly description of the failure. Always check `error_message` before accessing `extraction_result`:
+
+```python error_handling_example.py
+result, metadata, error = process_pdf(file_bytes=pdf_bytes, api_key=api_key)
+
+if error:
+    # Surface this to the user — the message is already human-readable
+    print(f"Could not extract policy data: {error}")
+else:
+    # Safe to access extraction_result fields
+    policy_data = result["policy"]
+```
+
+Common failure conditions:
+
+- **Invalid or missing API key** — returned immediately without calling Gemini.
+- **Invalid `policy_type` value** — caught before the pipeline runs; `error_message` describes the invalid value.
+- **Non-extractable document type** — some document formats (plain text, image-only scans with no recognisable policy structure) return a descriptive non-extractable message.
+- **Gemini API errors** — network failures, quota exhaustion, or model errors surface as error messages. The pipeline does not retry automatically.
+
+---
+
+## Caching
+
+The extraction pipeline caches results by a SHA-256 hash of the file bytes. If you call `process_pdf()` with the same PDF bytes a second time, the cached result is returned immediately with `metadata["source"] == "cache"` and `metadata["cost"] == 0`. No Gemini API call is made and no tokens are consumed.
+
+To bypass the cache — for example, after a pipeline update or when you suspect a stale result — pass `force_refresh=True`:
+
+```python cache_example.py
+# First call — hits Gemini, result is cached
+result, metadata, error = process_pdf(file_bytes=pdf_bytes, api_key=api_key)
+print(metadata["source"])  # "gemini"
+
+# Second call with same bytes — served from cache
+result, metadata, error = process_pdf(file_bytes=pdf_bytes, api_key=api_key)
+print(metadata["source"])  # "cache"
+
+# Force a fresh extraction
+result, metadata, error = process_pdf(
+    file_bytes=pdf_bytes,
+    api_key=api_key,
+    force_refresh=True,
+)
+print(metadata["source"])  # "gemini"
+```
+
+<Note>
+`UsageService` logs every extraction call that reaches the Gemini API. Cache hits are not logged as usage. Each logged call counts against the daily budget configured in `core.constants.DEFAULT_DAILY_BUDGET`. You can check your current spend with `UsageService.get_daily_usage()` and test budget status with `UsageService.is_over_budget()`.
+</Note>

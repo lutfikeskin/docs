@@ -1,0 +1,98 @@
+---
+title: "Bulk Certificate of Insurance Generation"
+sidebarTitle: "Bulk COI"
+description: "Generate COIs for multiple certificate holders at once and download them as a single ZIP archive in Insurance Doc Intelligence."
+---
+
+Bulk mode lets you generate Certificates of Insurance for multiple certificate holders from the same policy in a single operation. Instead of going through the single-COI flow once per holder, you select all the holders you need, configure coverage settings once, and download a ZIP archive containing one ready-to-send PDF for each holder. This is especially common for trucking and logistics companies that carry a large client list requiring current COIs — shippers, freight brokers, and terminal operators often all need certificates from the same underlying policy.
+
+<Steps>
+
+  <Step title="Navigate to Create COI and select the policy">
+    Open the **Create COI** page from the left sidebar. Search for the insured by name or policy number in the **Search policies** box, then select the correct policy from the dropdown. The page confirms the selected policy in an info banner.
+  </Step>
+
+  <Step title="Switch to Bulk Mode">
+    To the right of the **Select Policy** dropdown, toggle **Bulk Mode** on. The certificate holder form switches from individual address fields to a multi-select company list. Make sure Bulk Mode is enabled before selecting companies — toggling it off and back on resets the company selection.
+  </Step>
+
+  <Step title="Select multiple certificate holders">
+    Use the **Select Companies** multiselect to pick every holder you need. The list is loaded from your saved company data (`data/Additionalinsuredcomps.xlsx` and `data/coi_holders.json`). You can type in the multiselect box to filter by name. Select as many companies as needed — the count of selected companies is shown in an info message below the multiselect.
+
+    Once you have your selection, the system will generate one PDF per company using the name and address stored for each entry.
+  </Step>
+
+  <Step title="Choose the COI type">
+    Select the **COI Type** — **Additional Insured**, **Certificate Holder**, or **Lienholder** — using the radio buttons above the company list. The same type applies to every COI in the batch.
+
+    For **Lienholder** bulk COIs, you must also select the vehicles covered by the Loss Payee clause. The placeholder `[Certificate Holder Name]` in the operations description is automatically replaced with each company's name when its individual PDF is generated.
+  </Step>
+
+  <Step title="Configure coverage settings">
+    Under **Coverages to Include**, toggle **General Liability**, **Automobile Liability**, and **Motor Truck Cargo** to match what the policy covers. These settings apply uniformly to every COI in the batch.
+
+    - For **General Liability**, select the general aggregate ($1,000,000 or $2,000,000) using the radio button.
+    - **Motor Truck Cargo** is disabled for Lienholder COIs.
+
+    The checkboxes are pre-set based on the extracted policy data. Verify them before generating.
+  </Step>
+
+  <Step title="Review and edit the operations description">
+    The **Operations Description** text area is pre-populated with a description built from the policy. In bulk mode, this same description is applied to all COIs. You can edit it freely — the text applies to every holder in the batch.
+
+    Use the **Description Font Size** slider to adjust the font size (range: 4–12 pt, default: 8 pt) if the description is long. The same font size is used for every PDF in the batch.
+  </Step>
+
+  <Step title="Click 'Generate Bulk COIs'">
+    Click the **Generate Bulk COIs** button. The system loops through your selected companies and generates one ACORD 25 PDF per holder, then packages all the files into a single ZIP archive. A success message shows the number of COIs generated when the batch is complete.
+
+    If no companies are selected, the system shows an error. For Lienholder COIs, at least one vehicle must be selected before the batch can run.
+  </Step>
+
+  <Step title="Download the ZIP archive">
+    Click **📥 Download All (ZIP)** to save the archive. The ZIP file is named:
+
+    ```
+    COIs - Insured Name - Bulk.zip
+    ```
+
+    Inside the archive, each file is named:
+
+    ```
+    COI - Insured Name - Certificate Holder Name.pdf
+    ```
+
+    Extract the ZIP and distribute the individual PDFs directly to each certificate holder.
+  </Step>
+
+</Steps>
+
+## File Naming in Bulk
+
+Every PDF inside the ZIP follows the same naming convention used in single mode:
+
+```
+COI - Insured Name - Certificate Holder Name.pdf
+```
+
+The insured name is drawn from the policy record (editable on the page before generating), and the certificate holder name comes from the saved company entry for each selected holder. Characters that are invalid in Windows filenames are replaced with spaces automatically.
+
+This consistent naming makes it straightforward to identify which file belongs to which holder after extracting the ZIP, and it integrates cleanly with file systems and email clients that sort alphabetically.
+
+## Batch Size Considerations
+
+There is no hard upper limit on the number of certificate holders you can select for a bulk run. However, keep in mind:
+
+- Each PDF is generated individually and sequentially, so the total time scales linearly with the number of holders.
+- Very large batches — typically more than 50–100 holders — will noticeably increase the time before the download button appears.
+- If you regularly generate large batches, consider splitting them into logical groups (e.g., by region or client type) so that a single failure does not block an entire run.
+
+For smaller batches of a handful of holders, generation is near-instant.
+
+<Note>
+  Bulk mode only works with companies that are already in your saved certificate holder list. If a holder you need is not in `data/coi_holders.json` or `data/Additionalinsuredcomps.xlsx`, they will not appear in the multiselect. Add them to the saved list first, or generate their COI separately using [Single COI](/coi/single-coi) mode where you can enter holder details manually.
+</Note>
+
+<Tip>
+  Keep `data/coi_holders.json` up to date as your client list changes. Holders with stale addresses will produce COIs with incorrect information that you then have to regenerate. A brief quarterly review of the file — checking for address changes, new clients, and removed relationships — saves time during high-volume renewal seasons when bulk generation speed matters most.
+</Tip>

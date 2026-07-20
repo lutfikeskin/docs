@@ -1,0 +1,50 @@
+---
+title: "Insurance Doc Intelligence: Policy Operations Hub"
+sidebarTitle: "Introduction"
+description: "Insurance Doc Intelligence automates policy data extraction, COI generation, and renewal tracking so insurance brokers can focus on clients."
+---
+
+Insurance Doc Intelligence is an AI-powered operations workspace built for insurance brokers and agents who spend too much time manually keying data from policy PDFs. Upload a declarations page, and the application extracts structured policy data in seconds — populating coverage limits, effective dates, vehicle schedules, named insureds, and more. From there you can review and correct the results, save the record to your local database, generate a Certificate of Insurance, and track upcoming renewals — all without leaving a single browser tab.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Process Policies" icon="cloud-arrow-up" href="/features/process-policies">
+    Upload a PDF declarations page and let the Gemini-powered extraction engine pull out policy details automatically.
+  </Card>
+  <Card title="Database" icon="database" href="/features/database">
+    Browse, search, and manage every saved policy record. Filter by carrier, status, insured name, or policy number.
+  </Card>
+  <Card title="Renewals" icon="bell" href="/features/renewals">
+    See which policies are expiring soon, filter by days to expiry, and stay ahead of your renewal book.
+  </Card>
+  <Card title="COI Generation" icon="file-pdf" href="/coi/overview">
+    Select a saved policy, choose a certificate holder, and download a filled Certificate of Insurance PDF in one click.
+  </Card>
+  <Card title="Compare Policies" icon="arrows-left-right" href="/features/compare-policies">
+    Place two policy records side by side to spot coverage gaps, limit changes, or carrier differences at a glance.
+  </Card>
+  <Card title="Extraction Engine" icon="wand-magic-sparkles" href="/extraction/overview">
+    The Gemini-based pipeline routes each PDF through the right prompt, returns confidence scores per field, and applies a configurable quality gate before presenting results for review.
+  </Card>
+</CardGroup>
+
+## How It Works
+
+The core workflow moves in five stages:
+
+1. **Upload** — You drop a PDF declarations page onto the Process Policies screen. The app reads the raw text and passes it to the Gemini extraction pipeline.
+2. **Extract** — The pipeline identifies the policy type, selects the matching prompt, and returns a structured JSON payload with a confidence score attached to every field.
+3. **Review** — The extracted values appear on a form. Fields that fall below your configured confidence gate are pre-cleared so you can type them in manually rather than skimming past a wrong value. Nothing blocks you from saving — the gate is a nudge, not a lock.
+4. **Save** — You click Save and the record lands in your local SQLite database, ready to search, export, or compare.
+5. **COI** — Open Create COI, locate the policy, select a certificate holder from your holders list, and download the completed PDF.
+
+Renewal tracking and policy comparison sit on top of the same database, so every record you save is immediately available across every view.
+
+## What You Need
+
+Before you launch the application, make sure you have:
+
+- **Python 3.9 or later** installed on your machine or server.
+- A **Google Gemini API key** — required for PDF extraction and natural-language database queries. Browse the database and generate COIs from already-saved policies without one.
+- The **application running locally or on a server** — either via `streamlit run app.py` on your machine or deployed as a container.

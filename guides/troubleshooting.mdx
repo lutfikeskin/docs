@@ -1,0 +1,118 @@
+---
+title: "Troubleshoot Common Insurance Doc Intelligence Issues"
+sidebarTitle: "Troubleshooting"
+description: "Solutions for common issues: extraction errors, missing API key, duplicate detection confusion, COI generation failures, and database problems."
+---
+
+This guide covers the most common problems you may encounter while using Insurance Doc Intelligence, along with step-by-step fixes for each one. Issues are organized by symptom — find the one that matches what you are seeing and follow the steps to resolve it.
+
+<AccordionGroup>
+
+  <Accordion title="Extraction returns empty or wrong data">
+    When the extraction result comes back with blank fields, obviously wrong values, or the wrong policy type, work through these checks in order:
+
+    **1. Confirm you uploaded a declarations page.**
+    The extraction pipeline is optimized for policy declarations pages. Summaries, binders, loss runs, and endorsement forms have different structures and will produce poor results. If you uploaded one of those document types by mistake, re-upload the actual declarations page.
+
+    **2. Verify your Gemini API key is active.**
+    Look for the **green checkmark** next to the API key indicator in the sidebar. A red or missing indicator means the key is not loaded. Open **Settings** (⚙️ in the sidebar) and confirm the key is entered and valid. See the "API key shows as missing or inactive" section below if you need help with this step.
+
+    **3. Try Force Refresh.**
+    Insurance Doc Intelligence caches extraction results so the same PDF does not consume API quota on repeated uploads. If the document was recently updated or you suspect the cached result is stale, enable the **Force Refresh** toggle on the Process Policies page before uploading. This bypasses the cache and runs a fresh extraction from the current file.
+
+    **4. Check for an image-only (scanned) PDF.**
+    If your PDF was produced by scanning a physical document without OCR processing, it may contain no selectable text — just images of text. The extraction pipeline can process image-only PDFs, but accuracy is reduced compared to a native digital PDF. If the document is a scan, try to obtain a digitally generated version from the carrier if possible.
+
+    **5. Override the policy type if it was misclassified.**
+    If extraction ran successfully but the wrong policy type was detected (for example, a commercial auto was classified as personal auto), use the **policy type dropdown** on the review screen to correct the classification before saving. The saved record will use the type you select.
+  </Accordion>
+
+  <Accordion title="API key shows as missing or inactive">
+    Insurance Doc Intelligence uses a Gemini API key to power all AI features — extraction, natural language queries, and COI data prep. Without a valid key, none of these features work.
+
+    **1. Open Settings and check the key entry.**
+    Click the ⚙️ icon in the sidebar to open the Settings dialog. Look for the **Gemini API Key** field. If it is blank, enter your key now. If it shows a value, verify that the key is correct and has not been truncated.
+
+    **2. Validate the key in Google AI Studio.**
+    Navigate to [Google AI Studio](https://aistudio.google.com) and confirm the key is active and has not been revoked or exceeded its quota. If the key has been disabled, generate a new one and enter it in the Settings dialog.
+
+    **3. Check environment variable configuration.**
+    If you or your administrator configured the application to read the key from an environment variable, make sure `GEMINI_API_KEY` is set in the environment **before** starting the app. Environment variables loaded after the app starts are not picked up without a restart.
+
+    **4. Note that the key is session-scoped.**
+    The API key entered through the Settings dialog is stored for the current browser session only. If you refresh the page or open a new tab, the key is cleared and you will need to re-enter it. This is by design to avoid persisting sensitive credentials in browser storage. If this is inconvenient in your workflow, ask your administrator about setting the `GEMINI_API_KEY` environment variable at the server level so it is always available.
+  </Accordion>
+
+  <Accordion title="Daily budget limit reached">
+    Insurance Doc Intelligence tracks estimated API costs and shows a warning when your daily spend approaches or exceeds the configured budget.
+
+    **Understanding the budget.**
+    The default daily budget is **$2.50**. When this threshold is reached, a warning banner appears in the sidebar. The budget is a **soft warning** — extraction is not hard-blocked, but you should check your usage before continuing to avoid unexpected costs.
+
+    **Reset the daily usage meter.**
+    If you have verified that the spend was legitimate and want to continue working today, go to **Settings → Usage Management** and click **Reset Daily Usage Meter**. This resets the meter for the current day without deleting your historical usage logs.
+
+    **Permanently increase the budget.**
+    If your daily workflow regularly exceeds $2.50, you can raise the limit by changing the `DEFAULT_DAILY_BUDGET` value in `core/constants.py`. Set it to a value that reflects your expected daily extraction volume. Restart the application after saving the change for it to take effect.
+
+    **Reduce unnecessary extractions.**
+    Each re-upload of a cached PDF does not consume API quota (the result is served from cache). Quota is consumed on first extraction and when you use Force Refresh. If your budget is frequently depleted, check how many Force Refresh operations are being run — these bypass the cache and each one counts as a full API call.
+  </Accordion>
+
+  <Accordion title="COI generation fails or fields are blank">
+    If the Generate COI button produces an error, the downloaded PDF is empty, or key fields like the insured name, policy number, or coverage limits are missing, check the following:
+
+    **1. Confirm the policy has been saved to the database.**
+    COI generation requires a fully saved policy record. Extracting a policy and reviewing it in the Process Policies page is not sufficient — you must click **Save** to write the record to the database. Go to the **Database** page and confirm the policy appears there before attempting to generate a COI.
+
+    **2. Verify the relevant coverage sections are enabled.**
+    On the Create COI page, the GL, Auto, and Cargo sections are enabled only when extraction evidence for those coverage types was found in the policy. If a section toggle is disabled, it means the extraction did not find that coverage type in the document. You can manually enable a section and fill in the values, or re-extract from the original document using Force Refresh if you believe the coverage was missed.
+
+    **3. Enter certificate holder details.**
+    If the holder name, address, or other details are blank in the COI form, enter them manually in the holder fields on the Create COI page. You can also add frequently used companies to your holders list so they appear in the quick-fill dropdown for future COIs.
+
+    **4. Check for the PDF template file.**
+    COI generation uses a template file located at `data/COI Example.pdf`. If this file is missing — for example, after a fresh installation or a file system issue — the generator will fail silently and produce an empty output. Confirm the file exists at that path. If it is missing, restore it from your source files or backup.
+  </Accordion>
+
+  <Accordion title="Duplicate policy shows up twice in the database">
+    If the same policy appears as two separate records in your Database page, it was likely saved as a new record instead of updating the existing one during a re-upload.
+
+    **To resolve a duplicate:**
+
+    1. Open the **Database** page and identify both records.
+    2. Compare the two records to determine which one is more complete or up to date.
+    3. Delete the incorrect or older duplicate using the delete action on the policy row.
+    4. If you want to re-extract the correct version cleanly, go to **Process Policies**, enable **Force Refresh**, and re-upload the declarations page. When the duplicate detection banner shows an exact match, choose **Update existing record** rather than **Create new entry**.
+
+    **Why this happens.**
+    The duplicate detection engine normalizes policy numbers to account for spacing, dashes, and punctuation differences. However, policies with highly unusual formatting — such as numbers with non-standard delimiters or mixed case — may not match correctly. If you see repeated duplicates for a specific carrier's policy number format, inspect the two policy numbers carefully for hidden differences in spacing or special characters.
+  </Accordion>
+
+  <Accordion title="Policy is not appearing in the Renewals page">
+    The Renewals page only shows policies that have an **expiration date** saved in the database and whose expiration date falls within the tracking window (up to 60 days out, or up to 30 days overdue).
+
+    **Check the expiration date was extracted and saved.**
+    Open the **Database** page, find the policy, and confirm the **Expiration Date** field is populated. If it is blank, the policy was saved without an expiration date — either the extraction missed it or the field was cleared before saving. Edit the policy record directly in the Database page to add the correct expiration date.
+
+    **Check the policy status.**
+    Policies with a status of **Cancelled** or **Expired** may be excluded from the active renewal view. Open the policy record and check the **Status** field. If the status is set incorrectly, update it to **Active** and the policy will reappear in the renewal list on the next page load.
+  </Accordion>
+
+  <Accordion title="Export or Backup is empty">
+    **If Export is empty or contains fewer records than expected:**
+    The **Export** button exports the results of your current search and filter state — not the entire database. If you have an active search term or filter applied in the Database page, only matching records are included in the export. Clear the search field and any active filters, then run the export again to capture all records.
+
+    **For a complete database backup:**
+    Use the **Backup Database** button rather than Export. The Backup function captures the full contents of `insurance_data.db` regardless of any active search or filter state. The Export function is intended for quick filtered extracts; Backup is intended for full data preservation.
+  </Accordion>
+
+</AccordionGroup>
+
+## Getting Help
+
+If you have worked through the relevant section above and the issue persists, here are additional resources:
+
+- **Documentation** — review the feature reference pages for detailed explanations of each module's behavior
+- **Activity log** — open the **Settings** dialog and check the activity log for a timestamped record of recent operations; this often surfaces the exact step where something went wrong
+- **Application log** — check `logs/app.log` for detailed error messages and stack traces; this file contains low-level diagnostic information that is useful when reporting a bug or escalating an issue to your administrator

@@ -1,0 +1,90 @@
+---
+title: "Extraction Confidence Scores and Quality Gates"
+sidebarTitle: "Confidence & Quality"
+description: "Understand confidence scores assigned to extracted fields and configure quality gates to control which values need manual review before saving."
+---
+
+Every field returned by the extraction engine carries a confidence score — `high`, `medium`, or `low` — that reflects how certain the AI model is about the extracted value. The quality gate setting controls what the system does with low-confidence (or low- and medium-confidence) fields before you review them: it can leave all values in place, or pre-clear risky fields so you are prompted to fill them in manually. Saving a policy is never blocked by confidence scores; the gate is a soft nudge, not a hard stop.
+
+## Confidence Levels
+
+<CardGroup cols={3}>
+  <Card title="High Confidence" icon="circle-check" color="#16a34a">
+    The engine found a clear, unambiguous value in the document and is highly confident it is correct. These fields rarely need review. On the form they display a **green** badge.
+  </Card>
+  <Card title="Medium Confidence" icon="circle-minus" color="#d97706">
+    The engine extracted a value with reasonable certainty, but there was some ambiguity in the source text — for example, a partially obscured field or an unusual formatting convention. A quick glance is worthwhile. These fields display a **yellow** badge.
+  </Card>
+  <Card title="Low Confidence" icon="circle-exclamation" color="#dc2626">
+    The engine was uncertain about the extracted value. The document may have been poorly scanned, the field may have been absent, or the text was ambiguous. These fields display a **red** badge and should be verified before saving.
+  </Card>
+</CardGroup>
+
+## Confidence Gate Settings
+
+The quality gate is configured in **Settings** and applies globally to every extraction session. It determines which fields are pre-cleared on the review form.
+
+<Tabs>
+  <Tab title="Off">
+    **Setting value:** `off`
+
+    All extracted values are shown exactly as the engine returned them, regardless of confidence score. No fields are pre-cleared. You are responsible for reviewing every value and deciding what to trust.
+
+    Best for: workflows where you are spot-checking a high volume of clean, machine-generated PDFs and want to see every extracted value before making any edits.
+  </Tab>
+  <Tab title="Clear Low-Confidence (Recommended)">
+    **Setting value:** `medium` (default)
+
+    Fields with a **low** confidence score are blanked on the review form. You must enter a value manually for those fields before saving, or leave them empty. High- and medium-confidence fields are pre-filled normally.
+
+    This is the recommended default. It filters out only the riskiest extractions while keeping the majority of fields pre-populated for speed.
+  </Tab>
+  <Tab title="Clear Low + Medium-Confidence (Strictest)">
+    **Setting value:** `high`
+
+    Fields with either a **low** or **medium** confidence score are blanked. Only fields the engine is highly confident about are pre-filled. Everything else requires manual entry.
+
+    Best for: high-stakes commercial lines workflows, compliance-sensitive accounts, or situations where extraction accuracy has historically been inconsistent for a particular carrier.
+  </Tab>
+</Tabs>
+
+## How to Use Confidence Badges
+
+On the **Process Policies** review form, each extracted field label is accompanied by a small colored confidence badge:
+
+- 🟢 **Green** — high confidence
+- 🟡 **Yellow** — medium confidence
+- 🔴 **Red** — low confidence (or blanked if your gate setting clears these)
+
+Use the badges to focus your review effort. In a typical workflow, you can scan quickly for any red or yellow badges and verify only those fields, accepting the green-badged values as-is. This approach lets you process a declarations page in seconds rather than re-entering every field manually.
+
+For fields that were pre-cleared by the quality gate, the input will appear empty with a placeholder prompting you to fill it in. The badge color remains visible so you understand why the field was cleared.
+
+## Force Refresh
+
+If the extraction results on a file look incorrect — wrong carrier name, missing coverages, garbled dates — the most common fix is to re-run extraction on the original PDF. Click **Force Refresh** on the Process Policies screen to bypass the local extraction cache and submit the file to Gemini again from scratch.
+
+Force Refresh is useful when:
+
+- You previously extracted a file and the results were inaccurate
+- The PDF was replaced or updated since the last extraction
+- A new version of the extraction engine has been deployed and you want fresher results
+- You changed the policy type override and want the extraction to use the updated schema
+
+The new result overwrites the cached version, so subsequent opens of the same file will show the refreshed extraction.
+
+## Carrier Knowledge
+
+The extraction engine accumulates a knowledge profile for each carrier it processes over time. Carriers with a long history of consistent, high-quality extractions — where field values have repeatedly matched what agents confirmed on review — benefit from this accumulated signal during confidence scoring.
+
+This means that for well-known carriers with many processed documents in your account, confidence scores trend higher over time as the engine's carrier-level knowledge base matures. Unusual or first-time carriers will initially produce more medium- and low-confidence fields until sufficient history is built up.
+
+You do not need to configure anything for this feature — it operates automatically as you process more policies.
+
+<Tip>
+  The default quality gate — **Clear low-confidence fields** — is the best balance between speed and accuracy for most workflows. It removes only the values the engine is least sure about while keeping the majority of fields pre-filled, so you spend time only where it matters.
+</Tip>
+
+<Note>
+  Confidence scores are a soft hint, not a hard gate. You can always save a policy regardless of confidence levels — even if every field has a low score. The gate simply pre-clears risky fields on the review form so you are prompted to verify them. Nothing prevents you from typing in a value and saving normally.
+</Note>

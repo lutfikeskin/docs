@@ -1,0 +1,125 @@
+{
+  "projectType": "saas",
+  "projectName": "Insurance Doc Intelligence",
+  "projectDescription": "A Streamlit-based insurance operations workspace that extracts structured policy data from PDFs, manages policy records, generates Certificates of Insurance (COIs), and tracks renewals for brokers and agents.",
+  "theme": "luma",
+  "primaryColor": "#005AA9",
+  "lightColor": "#E6F4FF",
+  "darkColor": "#003366",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "configuration"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/dashboard",
+              "features/process-policies",
+              "features/database",
+              "features/renewals",
+              "features/compare-policies"
+            ]
+          },
+          {
+            "group": "COI Generation",
+            "pages": [
+              "coi/overview",
+              "coi/single-coi",
+              "coi/bulk-coi"
+            ]
+          },
+          {
+            "group": "Extraction Engine",
+            "pages": [
+              "extraction/overview",
+              "extraction/document-types",
+              "extraction/coverage-types",
+              "extraction/confidence-quality"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/first-policy",
+              "guides/managing-customers",
+              "guides/renewal-workflow",
+              "guides/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Policy Service",
+            "pages": [
+              "api/policy-service",
+              "api/customer-service",
+              "api/extraction-service"
+            ]
+          },
+          {
+            "group": "COI & Utilities",
+            "pages": [
+              "api/coi-service",
+              "api/usage-service"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "AI-powered PDF extraction of insurance policy data using Google Gemini",
+    "Certificate of Insurance (COI) generation from ACORD 25 template",
+    "Policy database with full CRUD, search, and customer management",
+    "Renewal tracking with urgency buckets and email draft generation",
+    "Side-by-side policy comparison and field-level diff view",
+    "Duplicate detection and smart policy update previews",
+    "Bulk COI generation with ZIP download",
+    "Natural language query interface for policy data",
+    "Daily API usage tracking and budget management",
+    "Extraction confidence quality gates"
+  ],
+  "publicApiSurface": [
+    "process_pdf(file_bytes, api_key, ...)",
+    "PolicyService.get_dashboard_metrics()",
+    "PolicyService.search_policies(term, limit, offset)",
+    "PolicyService.count_policies(term)",
+    "PolicyService.search_customers(term, orphan_filter, limit, offset)",
+    "PolicyService.count_customers(term, orphan_filter)",
+    "PolicyService.get_policy_by_id(policy_id)",
+    "PolicyService.get_policy_by_number(policy_number)",
+    "PolicyService.save_policy_from_extraction(extraction_result)",
+    "PolicyService.detect_duplicate_for_extraction(extraction_result)",
+    "PolicyService.preview_update_from_extraction(existing_policy, extraction_result)",
+    "PolicyService.update_policy(policy, updated_data)",
+    "PolicyService.delete_policy(policy)",
+    "PolicyService.ask_your_data(user_query, api_key)",
+    "PolicyService.get_renewal_buckets()",
+    "PolicyService.get_expiring_policies(days)",
+    "COIService.prepare_coi_data(...)",
+    "COIGenerator.generate_coi(policy_data, holder_data, desc_font_size)",
+    "UsageService.log_usage(...)",
+    "UsageService.is_over_budget(...)",
+    "UsageService.get_daily_usage()",
+    "UsageService.get_todays_call_count()"
+  ]
+}

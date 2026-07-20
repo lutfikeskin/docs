@@ -1,0 +1,141 @@
+---
+title: "Extract and Save Policies from PDF Documents"
+sidebarTitle: "Process Policies"
+description: "Upload insurance PDF documents to automatically extract structured policy data, review confidence scores, and save records to your database."
+---
+
+Process Policies is where raw PDF documents become structured, searchable policy records. You drop in a declarations page, a renewal dec, or a COI, and the AI pipeline reads every field — carrier, policy number, insured, effective and expiration dates, premium, liability limits, cargo limits, vehicles, drivers, coverages, and additional interests — and hands you a pre-filled review form. You verify, correct anything the model flagged as uncertain, and hit Save. The result is a clean policy record linked to the right customer profile, ready for the Database, Renewals, and Compare pages.
+
+<Note>
+  Policy extraction requires a valid Gemini API key. If you haven't added one yet, go to **Settings ⚙️** and paste your key into the Gemini API Key field. Without it, the **Start Extraction** button will be disabled and a warning banner will appear at the top of the upload step.
+</Note>
+
+## Supported Documents
+
+The extraction pipeline is trained on the most common commercial insurance document types:
+
+| Document type | What gets extracted |
+|---|---|
+| **Declarations page** | Full policy fields, vehicles, drivers, coverages, additional interests |
+| **Renewal declarations** | Same as declarations; effective and expiration dates are flagged for close review |
+| **Certificate of Insurance (COI) / Memorandum** | Policy rows listed on the certificate; vehicle and driver schedules when present |
+| **Endorsement** | Metadata only — endorsement type, parent policy number, form number, effective date, and a changes summary |
+
+For a complete breakdown of supported layouts and carrier-specific quirks, see [Document Types](/extraction/document-types).
+
+## Uploading PDFs
+
+<Steps>
+  <Step title="Choose a policy type (optional)">
+    Use the **Policy type** dropdown to tell the model what kind of document you're uploading. The default is **Commercial Auto**. Selecting a specific type skips the classification step and uses a scoped coverage registry, which means one fewer model call and slightly faster results.
+
+    Leave it on **Auto-detect (recommended)** when you're unsure or uploading a mixed batch — the pipeline will classify each document before extracting.
+  </Step>
+  <Step title="Upload your PDFs">
+    Click **Drop PDF files here** or drag and drop directly onto the upload zone. You can select multiple files at once from the file picker — the pipeline will queue them all.
+  </Step>
+  <Step title="Configure extraction options">
+    Two checkboxes appear below the uploader:
+
+    - **Parallel extraction** — processes up to 2–3 files simultaneously using adaptive worker sizing. Best for batches of more than 6 files. For smaller batches, sequential mode is often just as fast and easier to monitor.
+    - **Force Refresh (Bypass Cache)** — re-runs the Gemini extraction even if a cached result already exists for this file. Use this if you've modified the PDF or want a fresh extraction after a model update.
+  </Step>
+  <Step title="Start extraction">
+    Click **Start Extraction**. A progress bar tracks each file. When extraction is complete, a batch report table shows every file with its status (`ok` or `error`), cache source, retry count, and any error class.
+
+    For batches larger than one file, you can download the batch report as a CSV for your records.
+  </Step>
+</Steps>
+
+## Reviewing Extracted Data
+
+After extraction, you can choose to **Review Individually (Side-by-Side)** or **Save All to Database (Skip Review)**. The side-by-side review mode is recommended — it lets you catch low-confidence fields before they enter the database.
+
+The review screen splits into two columns: the original PDF on the left and the extracted data form on the right.
+
+### Confidence Badges
+
+Every extracted field label carries a confidence badge that tells you how certain the model was:
+
+| Badge | Meaning |
+|---|---|
+| ✅ **High** | The model found this value clearly and unambiguously. Trust it, but always spot-check key fields like policy number and premium. |
+| ◐ **Medium** | The model found a likely value but had some uncertainty — for example, a value printed in a non-standard position. Verify against the PDF. |
+| ⚠️ **Low** | The model had low confidence. The field may be pre-cleared (see below). Locate the value in the PDF and type it in manually. |
+
+### Confidence Gate
+
+The confidence gate is a soft nudge, not a blocker. When your gate threshold is set to **Clear low-confidence fields** (the default in Settings), any field the model rated as `low` confidence is pre-cleared in the review form — the extracted value is wiped so you have to look at the PDF and type it in yourself. This prevents auto-saving a wrong value just because it looks plausible.
+
+You can adjust the gate threshold in **Settings ⚙️**:
+
+- **Off** — trust all extracted values, show nothing blanked
+- **Clear low-confidence fields** *(default)* — blank out `low` fields only
+- **Clear low + medium-confidence fields** *(strictest)* — blank out anything below `high`
+
+### Review Tabs
+
+Below the main policy fields, four tabs let you review and edit the extracted collections:
+
+<Accordion title="🚙 Vehicles">
+  An editable table showing every vehicle on the policy: year, make, model, VIN, type (Truck, Tractor, Trailer, etc.), and GVW. You can add rows, delete rows, or correct any cell. VINs are validated against the standard 17-character format.
+</Accordion>
+
+<Accordion title="👤 Drivers">
+  An editable table of drivers: full name, license number, and whether the driver is excluded. Add or remove rows as needed.
+</Accordion>
+
+<Accordion title="🛡️ Coverages">
+  A detailed coverage grid showing coverage type, coverage code, per-occurrence limit, aggregate limit, combined single limit (CSL), and deductible. You can edit limits directly in the table or add coverage rows that the model missed.
+</Accordion>
+
+<Accordion title="🏢 Additional Interests">
+  The list of additional insureds, loss payees, lienholders, certificate holders, mortgagees, and other interest types. Each row shows entity name, address, and interest type.
+</Accordion>
+
+## Duplicate Detection
+
+Before you save, the system checks the incoming policy number against the existing database and shows one of four outcomes:
+
+<CardGroup cols={2}>
+  <Card title="New policy" icon="circle-plus" color="#198754">
+    No existing record matches this policy number. Saving creates a brand-new policy row.
+  </Card>
+  <Card title="Exact match — update preview" icon="rotate" color="#0d6efd">
+    A policy with the same number already exists. Saving will update it. An expandable **Preview changes before updating** table shows every field that changed, side by side (existing value vs. incoming value), so you can confirm the delta before committing.
+  </Card>
+  <Card title="Same-number conflict" icon="triangle-exclamation" color="#ffc107">
+    A policy with the same number exists but key identity fields (like carrier or insured name) differ significantly. Review carefully — this may be a data entry error or a legitimately separate policy that shares a number across carriers.
+  </Card>
+  <Card title="Possible related policy" icon="link" color="#6c757d">
+    No policy-number duplicate was found, but the system detected a likely relationship (renewal, rewrite, replacement, or same customer). An expandable card lets you review both policies side by side and choose how to link them, or ignore the suggestion and save independently.
+  </Card>
+</CardGroup>
+
+## Saving Policies
+
+Once you're satisfied with the review form, click **Create New Policy** (or **Update Current Policy** if a duplicate was found). On a successful save:
+
+- The policy record is inserted or upserted in the database.
+- A customer profile is created if no matching customer exists, or the policy is linked to the existing customer profile if one is found.
+- The record immediately becomes available in the [Database](/features/database), [Renewals](/features/renewals), and [Compare Policies](/features/compare-policies) pages.
+
+If you're processing a batch, the **Save & Next** button saves the current policy and immediately advances to the next one in the review queue.
+
+## Manual Policy Type Override
+
+If the auto-detected policy type is wrong — for example, the model classified a commercial package as general liability — you can fix it before saving. The **Policy Type** field in the review form shows the detected type. Use the dropdown at the top of the upload step (**Policy type**) to select the correct type before running extraction on that file, or correct the classification in the review form before saving.
+
+The supported policy types are:
+
+- Personal Auto
+- Commercial Auto
+- General Liability
+- BOP (Business Owners Policy)
+- Commercial Package
+- Umbrella
+- Motor Truck Cargo
+
+<Tip>
+  If your extraction results look stale or clearly wrong — for example, you edited the PDF and re-uploaded it but see the old values — check the **Force Refresh (Bypass Cache)** option before clicking Start Extraction. The pipeline caches results by file hash to save API calls, so an identical-looking file may return the cached version unless you explicitly bypass it.
+</Tip>

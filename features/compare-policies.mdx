@@ -1,0 +1,108 @@
+---
+title: "Compare Two Policies Side by Side"
+sidebarTitle: "Compare Policies"
+description: "Use the Compare page to see a field-by-field diff between any two policies — ideal for spotting coverage changes at renewal time."
+---
+
+The Compare Policies page gives you a structured, field-by-field diff between any two policies in your database. The most common use case is reviewing a renewal quote against the expiring policy — you want to know instantly whether the carrier changed a limit, dropped a coverage, added a vehicle, or adjusted the premium. But Compare works just as well for rewrites, endorsement-driven replacements, or simply auditing two policies that look suspiciously similar.
+
+Instead of printing two dec pages and highlighting differences by hand, you get a single screen that surfaces every change automatically.
+
+## Selecting Policies
+
+Two dropdown pickers sit side by side at the top of the page — **Policy A** on the left and **Policy B** on the right.
+
+Each option in the dropdown is labeled with:
+
+```
+Insured Name — Carrier — Policy Number — exp [Expiration Date]
+```
+
+This label format gives you enough identity information to find the right record without opening individual policies. For example:
+
+```
+Acme Trucking — Progressive — CPP-112233 — exp Dec 31, 2025
+```
+
+You can compare **any two policies in the database**, regardless of which customer they belong to. Policy A and Policy B are completely independent pickers — there are no restrictions on type, carrier, or date range.
+
+<Info>
+  The Policy B picker automatically excludes whichever policy you selected for Policy A, so you can never accidentally compare a policy against itself.
+</Info>
+
+### Auto-pairing with a prior renewal
+
+When you select Policy A and a confirmed renewal relationship exists in the database, a one-click **🔗 Auto-pair with prior renewal** button appears. Click it to instantly populate Policy B with the prior version. This is the fastest path to a renewal diff — no scrolling through dropdowns required.
+
+If no confirmed relationship is found, a short caption tells you to pick Policy B manually.
+
+## Reading the Diff
+
+Once both policies are selected, a **Field-by-field comparison** table renders every scalar policy field as a row.
+
+| Column | Meaning |
+|---|---|
+| **Δ** | A 🟡 marker if the two values differ; blank if they are identical |
+| **Field** | The human-readable field name (e.g., "Premium", "Liability Limit", "Expiration Date") |
+| **Policy A** | The value from the first policy you selected |
+| **Policy B** | The value from the second policy you selected |
+
+Changed rows are sorted to the **top** of the table so you see what moved without scrolling past a long list of identical fields. Unchanged fields follow alphabetically — they're there for full context, not just the delta.
+
+This means you can answer the most common renewal question — *"what exactly changed?"* — by reading the first few rows of the table.
+
+## KPI Strip
+
+Four metrics render between the pickers and the diff table whenever both policies are selected, giving you a quantified summary of the comparison before you read the details.
+
+<CardGroup cols={4}>
+  <Card title="Scalar fields changed" icon="pen-to-square">
+    The count of individual policy fields (carrier, premium, limits, dates, etc.) where Policy A and Policy B differ.
+  </Card>
+  <Card title="Vehicles Δ" icon="truck">
+    Shows how many vehicles are only on Policy A (removed) and how many are only on Policy B (added). Format: <code>+B / −A</code>.
+  </Card>
+  <Card title="Drivers Δ" icon="id-card">
+    Same format as Vehicles Δ — additions on B and removals from A at a glance.
+  </Card>
+  <Card title="Premium Δ" icon="circle-dollar-to-slot">
+    The dollar difference in premium between Policy A and Policy B, plus the percentage change. An increase renders red (higher cost to insured) and a decrease renders green.
+  </Card>
+</CardGroup>
+
+## Coverage and Vehicle Differences
+
+Below the scalar diff table, four expandable sections show collection-level differences. Each section automatically expands when there are additions or removals to call attention to.
+
+<Accordion title="🚗 Vehicles">
+  Three sub-sections: vehicles **only on Policy A** (dropped at renewal), vehicles **only on Policy B** (added at renewal), and vehicles **unchanged on both** policies. Each row shows Year, Make, Model, VIN, GVW, and vehicle type.
+</Accordion>
+
+<Accordion title="🧑 Drivers">
+  The same three-way split for drivers: only on A, only on B, and unchanged. Each row shows driver name, license number, and whether the driver is excluded.
+</Accordion>
+
+<Accordion title="🛡️ Coverages">
+  Four sub-sections for coverages:
+
+  - **Limit changed** — the same coverage line appears on both policies but with different limits. Each row shows the A and B values side by side for per-occurrence, per-accident, CSL, aggregate, and deductible.
+  - **Only on Policy A** — coverages dropped in Policy B
+  - **Only on Policy B** — new coverages in Policy B
+  - **Unchanged** — coverages identical on both policies
+</Accordion>
+
+<Accordion title="📎 Additional Interests">
+  Loss payees, additional insureds, lienholders, and other named parties that appear only on A, only on B, or on both. Adding or removing a bank, lessor, or certificate holder mid-term is easy to miss — this section makes it explicit.
+</Accordion>
+
+<Note>
+  If the two policies you selected belong to different customers, a warning banner appears at the top of the comparison:
+
+  > ⚠️ These policies belong to different customers. Comparing across customers is allowed but is rarely what you want — make sure this is intentional.
+
+  The comparison still runs fully and accurately. The warning is informational — it doesn't block or alter the diff results. Cross-customer comparisons are valid when you're evaluating a carrier rewrite that moved a client to a new policy number under a different entity name.
+</Note>
+
+<Tip>
+  Make Compare your first stop whenever you receive a renewal quote. Open it from the [Renewals](/features/renewals) page using the **🔀 Compare to prior renewal** button on the action panel — it pre-fills both pickers automatically. Then read the KPI strip first for a one-second gut check, and drill into the scalar table and collection expanders only if something looks off.
+</Tip>

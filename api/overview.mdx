@@ -1,0 +1,63 @@
+---
+title: "Service API Overview and Architecture"
+sidebarTitle: "Overview"
+description: "Insurance Doc Intelligence exposes an in-process Python service API for policies, customers, extraction, and COI generation."
+---
+
+Insurance Doc Intelligence exposes its functionality through a Python service layer. This service layer is the primary integration surface for customization, scripting, and automation — whether you are embedding the application into a larger workflow, writing data migration scripts, or building custom reporting on top of the policy database. There is no HTTP REST API in the current release; all operations happen in-process through direct Python method calls.
+
+## Service Classes
+
+The following service classes and entry points make up the full API surface:
+
+| Class / Function | Module | Description |
+|---|---|---|
+| `PolicyService` | `core.services` | Policy CRUD, search, duplicate detection, dashboard metrics, and natural language query. The central service for all policy and customer operations. |
+| `UsageService` | `core.services` | Logs every Gemini API call, tracks daily token spend, and checks budget limits. |
+| `COIService` | `core.services` | Prepares structured COI payload dicts from a `Policy` ORM object for use in PDF generation. |
+| `COIGenerator` | `modules.coi.generator` | Fills the ACORD COI PDF template with policy and certificate holder data and returns the PDF as bytes. |
+| `process_pdf()` | `modules.extraction` | Top-level extraction entry point. Accepts raw PDF bytes and returns a structured extraction result dict via the Gemini pipeline. |
+
+## Getting a Service Instance
+
+All service classes accept a SQLAlchemy `Session` object. Use the `init_db` and `get_session` helpers from `core.database` to obtain one:
+
+```python core/database_setup.py
+from core.database import get_session, init_db
+from core.services import PolicyService
+
+engine = init_db()
+session = get_session(engine)
+service = PolicyService(session)
+```
+
+You can instantiate multiple service classes against the same session:
+
+```python core/multi_service.py
+from core.database import get_session, init_db
+from core.services import PolicyService, UsageService, COIService
+
+engine = init_db()
+session = get_session(engine)
+
+policy_service = PolicyService(session)
+usage_service = UsageService(session)
+coi_service = COIService()
+```
+
+`COIService` is stateless and does not require a session. `COIGenerator` from `modules.coi.generator` is also instantiated directly without a session.
+
+## Error Handling
+
+The service layer uses the following return conventions:
+
+- **Query methods** (`search_policies`, `get_policy_by_id`, etc.) return data directly — a list, an object, or `None`. They do not wrap results in response envelopes.
+- **Save and delete methods** (`save_policy_from_extraction`, `delete_policy`) return a `(success: bool, message: str)` or metadata dict. Check the first element before assuming success.
+- **`process_pdf()`** returns a three-element tuple `(extraction_result, metadata, error_message)`. When extraction succeeds, `error_message` is `None`. When it fails, `extraction_result` and `metadata` are `None` and `error_message` contains a human-readable description of the failure.
+- **`ask_your_data()`** returns a two-element tuple `(rows, generated_sql)`. On error, `rows` is `None` and `generated_sql` contains the error message string.
+
+Unrecoverable database errors raise `sqlalchemy.exc.SQLAlchemyError`. Wrap long-running scripts in a try/except block and roll back the session on failure.
+
+<Note>
+This API is in-process only. Insurance Doc Intelligence does not expose an HTTP REST API in the current release. All integration happens through direct Python imports and method calls within the same process.
+</Note>

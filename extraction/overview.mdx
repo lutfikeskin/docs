@@ -1,0 +1,83 @@
+---
+title: "AI Policy Extraction Engine Overview"
+sidebarTitle: "Overview"
+description: "Learn how Insurance Doc Intelligence uses Google Gemini to extract structured policy data from insurance PDFs automatically."
+---
+
+Insurance Doc Intelligence uses Google Gemini's multimodal AI to read insurance PDF documents and produce structured, queryable policy data — without manual data entry. You upload a declarations page, certificate, or endorsement, and the engine returns a normalized policy record containing coverage details, vehicle schedules, driver lists, and insured information, ready for review and saving to your database.
+
+## What Gets Extracted
+
+The engine extracts a comprehensive set of fields from each document and organizes them into the following categories:
+
+<CardGroup cols={2}>
+  <Card title="Policy Information" icon="file-contract">
+    - **Carrier name** (`carrier_name`) — the brand shown on the document
+    - **Underwriter name** (`underwriter_name`) — the legal insurer entity when separately listed
+    - **Policy number**
+    - **Effective and expiration dates**
+    - **Total premium**
+    - **State of issuance**
+  </Card>
+  <Card title="Insured Information" icon="user">
+    - Insured name
+    - Street address, city, state, and ZIP code
+    - Business name (commercial policies)
+    - Financial responsibility name (if present)
+  </Card>
+  <Card title="Vehicles & Drivers" icon="car">
+    - Vehicle year, make, model, VIN, and type
+    - Per-vehicle physical damage coverages linked by VIN
+    - Driver names and license details (personal/commercial auto)
+  </Card>
+  <Card title="Coverages & Interests" icon="shield-check">
+    - Coverage lines with per-occurrence, aggregate, CSL, and deductible limits
+    - All coverage families: auto liability, UM/UIM, physical damage, GL, cargo, umbrella
+    - Additional interests (loss payees, lienholders, additional insureds, certificate holders)
+  </Card>
+</CardGroup>
+
+## Extraction Flow
+
+From your perspective, the process is fully automated after you upload a file. Here is what happens behind the scenes:
+
+<Steps>
+  <Step title="Upload PDF">
+    You upload an insurance PDF through the **Process Policies** screen. The file is hashed and checked against the local extraction cache. If an identical file has already been processed, the cached result is returned immediately — no API call is made.
+  </Step>
+  <Step title="Classify Document Type">
+    The engine sends the document to Gemini for classification. It determines both the **document type** (declarations page, COI, endorsement, etc.) and the **policy type** (personal auto, commercial auto, GL, etc.).
+  </Step>
+  <Step title="Route to Extraction Strategy">
+    Based on the document type, the pipeline routes to the appropriate extraction goal: full policy extraction, COI summary extraction, endorsement metadata extraction, or a non-extractable response for quotes and applications.
+  </Step>
+  <Step title="Extract Structured Data">
+    Gemini performs a single structured extraction pass using a schema tailored to the document type and policy type. The response is a validated JSON object conforming to the policy data model.
+  </Step>
+  <Step title="Normalize and Validate">
+    The raw extraction output is normalized: vehicles are refined, zero-value fields are cleaned up, coverages are validated against policy-type eligibility rules, and auto-liability CSL supremacy is applied where relevant. Summary fields (auto liability limits, GL limits, etc.) are computed and attached to the policy record.
+  </Step>
+  <Step title="Review and Save">
+    The structured result is presented on the review form. Each field shows a confidence badge. You can correct any values, then save the policy to your database.
+  </Step>
+</Steps>
+
+## Caching
+
+The extraction engine maintains a local hash-based cache to avoid redundant API calls. When you upload a PDF, the file content is hashed and compared against previously processed files. If the hash matches an existing cache entry, the stored result is returned instantly — saving both time and API cost.
+
+If a document has changed (for example, a corrected declarations page from your carrier) or if you suspect the previous extraction was inaccurate, use the **Force Refresh** option. Force Refresh bypasses the cache entirely and re-runs the full extraction pipeline against the live Gemini API, replacing the cached result with the new output.
+
+## Usage and Costs
+
+Every extraction call to the Gemini API is logged by the usage service. You can monitor your spend in real time from the **sidebar metrics** panel, which displays daily token usage and estimated cost.
+
+The default daily budget is **$2.50**. The engine checks this budget before making an API call — if the daily limit has been reached, extraction will be paused until the next day or until the budget is adjusted in settings.
+
+<Note>
+  For the full list of document types the engine can classify and extract, see [Supported Document Types](/extraction/document-types).
+</Note>
+
+<Tip>
+  Upload the highest-quality PDF scan you have. Clear, machine-generated PDFs (not scanned images) consistently produce the most accurate extractions. If you only have a scan, ensure it is at least 200 DPI and that text is not cut off at page edges.
+</Tip>
