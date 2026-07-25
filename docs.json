@@ -93,5 +93,13 @@
       "type": "github",
       "href": "https://github.com/lutfikeskin/InsuranceProject"
     }
+  },
+  "logo": {
+    "light": "/images/logo.png",
+    "dark": "/images/logo.png"
+  },
+  "appearance": {
+    "default": "light",
+    "strict": true
   }
 }
